@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { beep, vibrate } from '../lib/beep'
+import { claimRestAlertOnce } from '../lib/restnotify'
 import { setKeepAwake } from '../lib/wakelock'
 
 // ============================================================
@@ -91,11 +92,21 @@ export function RestTimer({
 
   // 归零时响一声 + 震一下。
   // finished 从 false 变成 true 时才会触发这一次（之后不再重复响）。
+  //
+  // ★ 但【归零】不等于【该我们响】—— 这条倒计时被冻住过的话，
+  //   归零的那一刻你可能正在微信里，系统通知已经替你响过一遍了。
+  //   所以先问 restnotify 那边一句：这次该不该由应用内来响？
+  //   （它记得"系统预约过哪一次""应用内已经响过哪一次"，
+  //     判断和理由都在那边，这里只负责响。）
+  //   返回 false 的两种情况：系统在后台已经响过；应用内已经响过一遍了。
+  //   没有那条系统通知时（网页版、没给权限）它一律返回 true ——
+  //   前台该响的照响，不会因为这次改动变哑。
   useEffect(() => {
     if (!finished) return
+    if (!claimRestAlertOnce(endsAt)) return
     beep()
     vibrate()
-  }, [finished])
+  }, [finished, endsAt])
 
   // ---------- 休息结束的样子 ----------
   // 故意不自动消失，要等用户点一下。

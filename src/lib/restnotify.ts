@@ -83,6 +83,52 @@ function restNotifyIdFor(endsAt: number): number {
 // 照样会顶掉旧的、不会攒出两条。
 let lastRestNotifyId: number | null = null
 
+// ============================================================
+// 记账：这次的提醒，到底该由谁来响（2026-09-30 加）
+// ============================================================
+//
+// 【要解决的是什么问题：同一场休息，响了两遍】
+//
+// 你切到微信，到点系统通知响了一次；切回 App，它又"叮三声 + 震两下"。
+// 因为应用内那声铃（RestTimer.tsx 里那句 beep() + vibrate()）不知道
+// 系统那条已经在后台替你响过了 —— 它只是照着"倒计时归零"这个事实响。
+//
+// 【怎么判断"系统已经替我们响过了"】
+// 光看"预约成功过"是不够的：你切出去瞄一眼、休息没结束就切回来，
+// 这时 cancelRest() 会把那条预约【撤掉】（人回到前台就不该再弹系统通知）——
+// 它压根没响过，可要是还记着"系统管过这次"，到点就两头都不响，
+// 变成一声都没有。所以 cancelRest() 里配了一行"作废"（见那边注释）。
+//
+// 【为什么必须是两个格子，不能合成一个】
+// 一个是"系统响过了"，一个是"应用内响过了"，两件事：
+//   · 系统响过 → 应用内不能再响（你已经在后台被提醒过一次了）
+//   · 应用内响过 → 不能因为重新挂载再响一遍
+// 用 lastRestNotifyId 代替是不行的 —— cancelRest() 一进门就把它清空了
+// （回前台必然会走一次 cancelRest，正好把它抹掉）。
+//
+// 【只在 App 活着的时候记得住】
+// 模块变量不进存档。App 被系统杀掉再打开，这两个格子会丢 ——
+// 但不会因此多响一声：重新打开时训练页会把"已经过期的休息"整个丢掉
+// （见 TrainScreen.tsx 里 restEndsAt 的初值），连倒计时都不显示，更不会响。
+let notifiedEndsAt: number | null = null // 跟系统预约成功的那个结束时刻
+let alertedEndsAt: number | null = null // 应用内已经响过的那个结束时刻
+
+// 这次休息的提醒，该不该由【应用内】来响？
+//   true  = 去响（beep + 震动）
+//   false = 别响：系统那条已经响过了，或者应用内已经响过一遍了
+// 叫 claim（认领）是因为它顺手把这次"占"下来 —— 同一场休息再问第二次
+// 一定回答 false。这样"一场休息只准响一次"这条规矩就写死在这里，
+// 不靠调用方记得。
+export function claimRestAlertOnce(endsAt: number): boolean {
+  // ① 系统在后台替我们响过了。
+  //    （Date.now() >= endsAt 是保险：没人会在到点之前来问这句话，
+  //     真来了也说明"系统还没响"，那就该我们响。）
+  if (notifiedEndsAt === endsAt && Date.now() >= endsAt) return false
+  if (alertedEndsAt === endsAt) return false // ② 应用内已经响过一遍了
+  alertedEndsAt = endsAt // 先占位，再告诉它去响
+  return true
+}
+
 // 通知渠道的编号（安卓 8 起，每条通知都必须属于某个"渠道"）。
 // 详见下面 createChannel() 那段注释。
 //
@@ -266,6 +312,9 @@ async function scheduleRest(endsAt: number): Promise<void> {
     })
     // 预约成功了才记下来 —— 失败了就没什么可撤的
     lastRestNotifyId = id
+    // 同一时刻记下"这次休息交给系统了"。到点时若人还在后台，
+    // 它会响；那时应用内就不该再补一声（见 claimRestAlertOnce）。
+    notifiedEndsAt = endsAt
   } catch {
     // 通知权限被系统关掉了 —— 插件的 schedule() 会直接报错
     // （源码里写死了 "Notifications not enabled on this device"）。
@@ -281,6 +330,21 @@ async function cancelRest(): Promise<void> {
   // 先把号取走再清空 —— 万一下面抛错，也不会留下一个"其实已经撤了"的号
   const id = lastRestNotifyId
   lastRestNotifyId = null
+
+  // ★ 撤掉的是一条【还没到点】的通知 → 它根本没响过 → "系统已经管过这次"
+  //   这个标记必须跟着作废，否则到点会两头都不响（应用内被 claim 拦住，
+  //   系统那条又已经撤了）—— 一声都没有。
+  //
+  // 【什么时候会走到这里】最常见的是"切出去瞄一眼又切回来"：
+  //   人一回前台，syncRestNotify() 就判定不该有系统通知，把它撤掉。
+  //   这时离结束还有一会儿，所以 endsAt 在未来 → 作废 → 到点照样响。
+  //
+  // 【什么时候不作废】人一直在后台、到点听过通知之后再回来：
+  //   这时 endsAt 已经过去（Date.now() >= notifiedEndsAt）→ 保留标记 →
+  //   回来时应用内就安静了。这正是这次要修的重复提醒。
+  if (notifiedEndsAt !== null && Date.now() < notifiedEndsAt) {
+    notifiedEndsAt = null
+  }
 
   try {
     // ① 取消"还没到点"的那条。
