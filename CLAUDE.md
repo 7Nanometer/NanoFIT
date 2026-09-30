@@ -358,6 +358,28 @@ BMI = 体重kg ÷ 身高m²
   `schedule.at` 必须配 `allowWhileIdle: true`（→ `setExactAndAllowWhileIdle`，
   **会唤醒睡着的手机**）。点"跳过"和结束训练时必须**成套取消**，
   否则会出现"已经进下一组了，通知还在响"。
+- ★★ **同一场休息只准响一次：系统响了，应用内就不再补响**（2026-09-30 修）。
+  现象：切到微信、系统通知响了，切回 App 又"叮三声 + 震两下"。
+  原因：应用内那声铃（`RestTimer` 的 `beep() + vibrate()`）只看"倒计时归零"，
+  不知道系统已经在后台替它响过。
+  现在 `restnotify.ts` 记两笔账，`RestTimer` 响之前先问一句
+  `claimRestAlertOnce(endsAt)`（返回 false 就别响）：
+  · `notifiedEndsAt` = 跟系统预约成功的那个结束时刻（`scheduleRest` 里记）
+  · `alertedEndsAt` = 应用内已经响过的那个结束时刻（"只准响一次"写死在函数里）
+  ★★ **`cancelRest()` 里那行"作废"不能删**：撤掉的是**还没到点**的通知时，
+    把 `notifiedEndsAt` 清掉 —— 它根本没响过。少了这行，
+    "切出去瞄一眼、没到点又切回来"会**两头都不响**（系统那条刚被撤掉，
+    应用内又被 claim 拦住），一声都没有。这是最日常的用法。
+  ★ 判据**不能**用 `lastRestNotifyId`：回前台必然走一次 `cancelRest()`，
+    它一进门就把那个号清空了（这正是这次没用它的原因）。
+  ★ 冷启动**不用管**：App 被杀掉再打开时，训练页会把已经过期的休息整个丢掉
+    （`TrainScreen` 里 `restEndsAt` 初值那句 `saved > Date.now()`），
+    连倒计时都不显示，也就不会补响。
+  ★ 同理，**"切到别的 tab、休息在那边结束、再切回来"本来就不响** ——
+    那是上面那句初值判断拦掉的，**不是漏了**，别在那里加"补响"。
+  ★ 这条在电脑上能复现：那套"假手机"（预置 `CapacitorCustomPlatform` +
+    顶掉 `AudioContext` 数叮了几声 + 手动喂 `appStateChange`）改之前跑，
+    场景一当场就是"叮 3 声、震 2 次"。
 - **权限**：通知权限在**第一次开始休息时**才申请（安卓上拒绝过之后系统
   就不再弹框了，第一次机会很宝贵）。精确闹钟用 `SCHEDULE_EXACT_ALARM`，
   **故意不用 USE_EXACT_ALARM** —— 那条自动授予、用户撤不掉，用着更舒服，
