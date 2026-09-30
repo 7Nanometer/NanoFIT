@@ -411,13 +411,29 @@ BMI = 体重kg ÷ 身高m²
   和 `window.Capacitor.PluginHeaders`（把方法列成原生方法），
   再把自己的 `nativePromise` / `nativeCallback` 换成记录器 ——
   这样 `LocalNotifications.schedule()` 收到的入参会被原样录下来。
-  ⚠️ 两个坑：
+  ⚠️ 四个坑（前两个早就踩过，后两个是 2026-09-30 踩的）：
   · `addListener` 只要这个插件**有原生 header 就走原生回调那条路**
     （core 里 `case 'addListener': return pluginHeader ? addListenerNative : addListener`），
     **根本不会去实例化网页版实现**。所以"切后台"得自己回调
     `{ isActive: false }` 来驱动，别指望 `document.visibilitychange`。
   · 假扮成手机之后 `storage.ts` 会改走 Preferences 插件（不是 localStorage），
     所以那个也得一起接住，否则 App 写进去的东西一点都看不到。
+  · ⚠️⚠️ **假的 `nativeCallback` 绝不能顺手调一下那个 callback。**
+    core 里 `removeListener` 是把回调**也一起传过去**的
+    （`removeListener({eventName, callbackId}, callback)`），真机的原生桥
+    只把它当"新登记的回调"、永远不会去调它。假手机要是"好心"调一下
+    （`cb({})`）= 自己按了返回键 → 训练页那个"确定要退出 App 吗"的
+    `window.confirm` 被顶出来 → **整个页面的 JS 全卡死**，
+    表现是 CDP 求值全部超时、`Debugger.pause` 也抓不到栈（弹窗不算 JS 在跑）。
+    排查这类"页面卡死"的第一件事：监听 `Page.javascriptDialogOpening`。
+  · **隔着 CDP 传 Date 会读不出内容**：`Runtime.evaluate` 把返回值序列化一遍，
+    `schedule.at` 这种 Date 到了 Node 这边就成了空壳，`new Date(它)` = NaN。
+    → 换算在页面里做（`at instanceof Date ? at.getTime() : ...`），只传数字回来。
+  · **存档是"内存快照"，直接往 localStorage 写格子骗不过它**（见 storage.ts 顶部）。
+    种数据只有两条路：调用 `storage.ts` 的写函数（源码版才行），
+    或者写格子**之后再重新打开一次**。★ 但重新打开会把模块级变量清零，
+    所以顺序必须是"先种数据、重新打开，再制造前后台事件" ——
+    反过来的话，那两笔账被清干净了，测试等于什么都没验。
 
 ## 安卓打包（2026-09-23 加的）
 
