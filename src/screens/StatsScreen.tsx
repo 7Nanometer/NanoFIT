@@ -35,12 +35,12 @@ import {
   thisWeekStartKey,
   thisWeekVolume,
   usedExerciseIds,
-  weeklyKcal,
   weeklyVolumes,
 } from '../lib/stats'
 import {
   averageSessionSec,
   dailyDurations,
+  dailyKcal,
   thisWeekDurationSec,
 } from '../lib/stats'
 import type { OneRmPoint } from '../lib/stats'
@@ -170,7 +170,9 @@ export function StatsScreen() {
 
   const weekKcal = thisWeekKcal(sessions, weightKg, cardioIds)
   const monthKcal = thisMonthKcal(sessions, weightKg, cardioIds)
-  const kcalPoints = weeklyKcal(sessions, weightKg, cardioIds, 8)
+  // 图上是"最近 14 天，一天一根柱子"（2026-09-30 从"最近 8 周"改的）。
+  // 天数写在这里，理由见 stats.ts 的 dailyKcal 那段注释。
+  const kcalPoints = dailyKcal(sessions, weightKg, cardioIds, 14)
 
   // 纵轴刻度。两个 true 的含义见下面柱状图那段注释。
   const kcalAxis = niceAxis(
@@ -582,15 +584,17 @@ export function StatsScreen() {
           )}
 
           <ChartCard
-            title="每周消耗"
-            subtitle="最近 8 周。力量和有氧分开画，因为它们的算法完全不同。"
+            title="每日消耗"
+            // 最后那句"没练的日子是空的"不是废话：一天一根柱子之后，
+            // 图上会真的出现一串贴着底的 0，不说清楚会以为图坏了。
+            subtitle="最近 14 天。力量和有氧分开画，因为它们的算法完全不同。没练的日子是空的，不是图坏了。"
             rows={kcalPoints.map((p) => ({
-              周: p.label,
+              日: p.label,
               力量: p.strength.toLocaleString(),
               有氧: p.cardio.toLocaleString(),
             }))}
             columns={[
-              { key: '周', label: '那一周（周一的日期）' },
+              { key: '日', label: '那一天' },
               { key: '力量', label: '力量训练，千卡' },
               { key: '有氧', label: '有氧，千卡' },
             ]}
@@ -612,6 +616,10 @@ export function StatsScreen() {
                   stroke={C.muted}
                   fontSize={11}
                   tickLine={false}
+                  // 14 个 '9/24' 在手机上横着排不下，交给这两句抽稀
+                  // （和下面那几张折线图用同一组常量，别各写各的）
+                  minTickGap={X_TICK_MIN_GAP}
+                  interval={X_TICK_INTERVAL}
                 />
                 <YAxis
                   stroke={C.muted}
@@ -629,7 +637,7 @@ export function StatsScreen() {
                     `${Number(value).toLocaleString()} 千卡`,
                     String(name),
                   ]}
-                  labelFormatter={(label) => `${String(label)} 那一周`}
+                  labelFormatter={(label) => `${String(label)} 那一天`}
                 />
                 <Bar
                   dataKey="strength"

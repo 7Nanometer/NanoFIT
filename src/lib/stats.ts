@@ -515,51 +515,62 @@ export function thisMonthKcal(
   )
 }
 
-// 每周消耗，给柱状图用。每周两根柱子：力量、有氧。
-export type WeeklyKcalPoint = {
-  label: string
+// 每日消耗，给柱状图用。一天两根柱子：力量、有氧。
+//
+// 【为什么是"每天"，不是"每周"】（2026-09-30 改的）
+// 每周一根柱子，8 根柱子回答的是"这几个月练得怎么样"；
+// 一天一根柱子回答的是"这半个月哪天练了、哪天没练"。
+// 后者才是训练记录本该回答的问题：一周里的波动全被平均掉了，
+// 一周练两次和天天练，画成一根柱子长得一模一样。
+// 天数取 14：7 天太短、看不出跟上一周的对比；30 天柱子会细到看不清。
+export type DailyKcalPoint = {
+  label: string // '9/24'
   strength: number
   cardio: number
 }
 
-export function weeklyKcal(
+export function dailyKcal(
   sessions: WorkoutSession[],
   weightKg: number | undefined,
   cardioIds: ReadonlySet<string>,
-  weekCount = 8,
-): WeeklyKcalPoint[] {
-  const points: WeeklyKcalPoint[] = []
-  const monday = mondayOf(new Date())
+  dayCount = 14,
+): DailyKcalPoint[] {
+  // 先把"每天多少"攒出来。★ 同一天练两次是**累加进同一格**，
+  // 不是画两根柱子 —— 图上"一天"只有一根柱子的位置。
+  const byDate = new Map<string, { strength: number; cardio: number }>()
+  for (const session of sessions) {
+    const split = sessionKcalSplit(session, weightKg, cardioIds)
+    if (split === null) continue
+    const cur = byDate.get(session.date) ?? { strength: 0, cardio: 0 }
+    cur.strength += split.strength
+    cur.cardio += split.cardio
+    byDate.set(session.date, cur)
+  }
 
-  for (let i = weekCount - 1; i >= 0; i--) {
-    const start = new Date(monday)
-    start.setDate(start.getDate() - i * 7)
-    const end = new Date(start)
-    end.setDate(end.getDate() + 6)
+  const today = todayKey()
+  const points: DailyKcalPoint[] = []
 
-    const startKey = dateKey(start)
-    const endKey = dateKey(end)
-
-    let strength = 0
-    let cardio = 0
-    for (const session of sessions) {
-      if (session.date < startKey || session.date > endKey) continue
-      const split = sessionKcalSplit(session, weightKg, cardioIds)
-      if (split === null) continue
-      strength += split.strength
-      cardio += split.cardio
-    }
-    // 抹到 10 —— 和页面上别处显示热量用的是同一个 roundKcal。
-    //
-    // ★ 2026-09-24 改的。原来这里是 Math.round（抹成整数），
-    //   结果同一个页面上出现两种精度：上面的卡片写"约 110 千卡"，
-    //   这张图的「看数字」表里写 113 —— 看着像哪里算错了。
-    //   改在数据这一层，柱子高度、鼠标提示、看数字表、纵轴刻度
-    //   全部一起统一，不会再各说各话。
+  // 从最早的那天开始，一天一天往后排。
+  //
+  // ★ 没练的日子**补 0，不能跳过**：连着几天空着本身就是信息
+  //   （"这周只练了一次"一眼就看出来了）。跳过的话横轴会变成
+  //   "练过的那些天"挤在一起，看着天天都在练。
+  // ★ 往前推日期用 shiftDays（和 dailyDurations 同一个口径），
+  //   不要自己 new Date() 加减天数 —— 跨月、跨年时那种写法容易出错。
+  for (let i = dayCount - 1; i >= 0; i--) {
+    const key = shiftDays(today, -i)
+    const v = byDate.get(key)
     points.push({
-      label: shortLabel(startKey),
-      strength: roundKcal(strength),
-      cardio: roundKcal(cardio),
+      label: shortLabel(key),
+      // 抹到 10 —— 和页面上别处显示热量用的是同一个 roundKcal。
+      //
+      // ★ 2026-09-24 改的。原来这里是 Math.round（抹成整数），
+      //   结果同一个页面上出现两种精度：上面的卡片写"约 110 千卡"，
+      //   这张图的「看数字」表里写 113 —— 看着像哪里算错了。
+      //   改在数据这一层，柱子高度、鼠标提示、看数字表、纵轴刻度
+      //   全部一起统一，不会再各说各话。
+      strength: roundKcal(v?.strength ?? 0),
+      cardio: roundKcal(v?.cardio ?? 0),
     })
   }
   return points
