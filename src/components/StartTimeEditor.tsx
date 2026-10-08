@@ -102,14 +102,14 @@ export function StartTimeEditor({
       </button>
 
       {open && (
-        <div className="mt-2 rounded-lg border border-line p-2">
+        <div className="mt-2 rounded-lg border border-line-2 p-2">
           <div className="flex flex-wrap gap-2">
             {QUICK_MINUTES.map((min) => (
               <button
                 key={min}
                 type="button"
                 onClick={() => shiftEarlier(min)}
-                className="min-h-11 rounded-lg border border-line px-3 text-sm text-ink-2"
+                className="press inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-2"
               >
                 提前 {min === 60 ? '1 小时' : `${min} 分钟`}
               </button>
@@ -122,7 +122,7 @@ export function StartTimeEditor({
               type="time"
               value={manualText}
               onChange={(e) => applyManual(e.target.value)}
-              className="min-h-11 rounded-lg border border-line bg-bg px-3 text-sm text-ink outline-none focus:border-brand"
+              className="min-h-11 rounded-lg border border-line-2 bg-surface-2 px-3 text-sm text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
             />
           </div>
 

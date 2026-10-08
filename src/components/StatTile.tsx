@@ -16,7 +16,7 @@ type Props = {
 
 export function StatTile({ label, value, hint }: Props) {
   return (
-    <div className="flex-1 rounded-xl border border-line bg-surface p-3">
+    <div className="flex-1 card p-3">
       <div className="text-xs text-muted">{label}</div>
       <div className="mt-1 text-xl font-bold tabular-nums text-ink">
         {value}

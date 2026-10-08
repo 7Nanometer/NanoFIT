@@ -96,25 +96,31 @@ export function HistoryScreen() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold">历史</h1>
-      <p className="mb-4 text-sm text-muted">
-        {sessions.length === 0
-          ? '还没有记录'
-          : `共 ${sessions.length} 次训练`}
-      </p>
+      {/* 标题区和训练页用同一套排法（大标题 + 紧跟一行说明），
+          这样在四个 tab 之间来回切的时候，每页开头的感觉是一致的 */}
+      <header className="mb-5">
+        <h1 className="t-num text-2xl font-bold">历史</h1>
+        <p className="mt-1 text-sm text-ink-2">
+          {sessions.length === 0
+            ? '还没有记录'
+            : `共 ${sessions.length} 次训练`}
+        </p>
+      </header>
 
       {storageError && (
-        <div className="mb-3 rounded-lg border border-brand bg-brand/10 p-3 text-sm text-brand">
+        <div className="mb-3 rounded-xl border border-brand bg-brand/10 p-3 text-sm text-brand">
           存不进去了，可能是手机存储满了。请先告诉我。
         </div>
       )}
 
-      {/* ---------- 按动作筛选 ---------- */}
+      {/* ---------- 按动作筛选 ----------
+          造型和输入框统一（凹槽底 + 深一档的边界 + 聚焦时描边变主色），
+          因为它们都是"能改控件"的同一类东西。 */}
       {usedExercises.length > 0 && (
         <select
           value={filterExerciseId}
           onChange={(e) => setFilterExerciseId(e.target.value)}
-          className="mb-3 w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
+          className="mb-3.5 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
         >
           <option value="">看全部训练</option>
           {usedExercises.map((e) => (

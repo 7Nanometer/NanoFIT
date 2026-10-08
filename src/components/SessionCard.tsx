@@ -51,23 +51,32 @@ export function SessionCard({
     .filter((s) => cardioIds.has(s.exerciseId))
     .reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
 
-  // 收起时那行摘要：有几样说几样，没有的那一项整个不出现
-  const summaryParts: string[] = []
-  if (strengthEntries.length > 0) {
-    // 这里单独数一遍"几个动作"，不能用上面 groups.length ——
-    // 那个把有氧动作也算进去了
-    const strengthGroups = new Set(
-      strengthEntries.map((s) => s.exerciseId),
-    ).size
-    summaryParts.push(
-      `${strengthGroups} 个动作 · ${strengthEntries.length} 组 · 总容量 ${sessionVolume(
-        strengthEntries,
-      ).toLocaleString()} kg`,
-    )
-  }
-  if (cardioSeconds > 0) {
-    summaryParts.push(`有氧 ${formatDuration(cardioSeconds)}`)
-  }
+  // ---------- 收起时的两行怎么排 ----------
+  //
+  // 【改之前为什么难读】
+  // 原来是一整句：「2 个动作 · 3 组 · 总容量 1,560 kg」。
+  // 这句话里"1,560"是最该被看到的数字（它最能说明"这次练了多少"），
+  // 却和"个动作""组"这些字一样大、一样颜色 —— 得逐字读才能挑出来。
+  //
+  // 【现在怎么排】
+  // 把总容量拎出来当这一条的"主数字"：单独放大、加粗、变成主文字色；
+  // 动作数和组数退到同一行的右边，用小字浅色。
+  // 这样一列卡片从上往下扫，看到的是一串大小差不多的数字，
+  // **进步还是退步，扫一眼就比出来了** —— 这才是历史页存在的意义。
+
+  // 这里单独数一遍"几个动作"，不能用上面 groups.length ——
+  // 那个把有氧动作也算进去了
+  const strengthGroups = new Set(strengthEntries.map((s) => s.exerciseId)).size
+  const volumeKg =
+    strengthEntries.length > 0 ? Math.round(sessionVolume(strengthEntries)) : null
+  const countText =
+    strengthEntries.length > 0
+      ? `${strengthGroups} 个动作 · ${strengthEntries.length} 组`
+      : ''
+
+  // 纯有氧的场次没有总容量可显示（那一条的 weightKg/reps 都是 0），
+  // 就把有氧时长顶上"主数字"的位置，否则那一行会空着
+  const cardioOnly = volumeKg === null && cardioSeconds > 0
 
   // ---------- 第二行：时长 · 档位 · 热量（★ 2026-09-24 加的）----------
   //
@@ -107,27 +116,82 @@ export function SessionCard({
     detailParts.push(formatKcal(kcal))
   }
 
+  // 有氧时长：只有在"总容量已经占了主数字位置"时才写进说明行。
+  // 纯有氧那条路它已经当主数字用了，这里再写一遍就是重复。
+  if (cardioSeconds > 0 && volumeKg !== null) {
+    detailParts.push(`有氧 ${formatDuration(cardioSeconds)}`)
+  }
+
   return (
-    <div className="mb-2 rounded-xl border border-line bg-surface">
+    <div className="card mb-2.5 overflow-hidden">
       {/* ---------- 收起来时的样子（整个卡片都能点） ---------- */}
       <button
         type="button"
         onClick={onToggle}
-        className="w-full p-3 text-left"
+        className="press w-full p-3.5 text-left"
       >
-        <div className="flex items-center gap-2">
-          <span className="flex-1 font-medium text-ink">
+        {/* 第一行：日期（左） + 展开/收起 + 一个会转的箭头（右） */}
+        <div className="flex items-center gap-1.5">
+          <span className="flex-1 truncate text-base font-semibold text-ink">
             {formatDateCN(session.date)}
             {session.name !== undefined && ` · ${session.name}`}
           </span>
-          <span className="shrink-0 text-muted">{expanded ? '收起' : '展开'}</span>
+          <span className="shrink-0 text-xs text-muted">
+            {expanded ? '收起' : '展开'}
+          </span>
+          {/* 箭头本身就是"能点开"的通用符号，比"展开"两个字更快被认出来。
+              展开时转 180 度 —— 这一点转动把"状态变了"说清楚了，
+              否则内容一多一少，眼睛会以为是页面跳了一下。
+              两个都给（文字 + 箭头）是因为主人是新手：
+              单给箭头怕他没意识到能点，单给文字又不如箭头快。 */}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className={`h-4 w-4 shrink-0 text-muted transition-transform duration-250 ease-mech ${
+              expanded ? 'rotate-180' : ''
+            }`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </div>
-        <div className="mt-1 text-sm text-muted">
-          {summaryParts.join(' · ')}
+
+        {/* 第二行：主数字（左） + 动作数/组数（右） */}
+        <div className="mt-1.5 flex items-baseline gap-1.5">
+          {volumeKg !== null && (
+            <>
+              {/* 顺序是"名称 → 数字 → 单位"。
+                  写成"数字 → 单位 → 名称"（1,560 KG 总容量）会读成倒装，
+                  得回头再看一眼才明白；中文里"总容量 1,560 kg"才是顺着念的。 */}
+              <span className="t-label">总容量</span>
+              <span className="t-num text-lg font-semibold text-ink">
+                {volumeKg.toLocaleString()}
+              </span>
+              <span className="t-label">kg</span>
+            </>
+          )}
+          {/* 纯有氧的那一天：把一个"时长"顶上主数字的位置，
+              否则这一行会空着、卡片看着像缺了东西 */}
+          {cardioOnly && (
+            <span className="t-num text-lg font-semibold text-ink">
+              {formatDuration(cardioSeconds)}
+            </span>
+          )}
+          {countText !== '' && (
+            <span className="ml-auto shrink-0 text-xs text-muted">
+              {countText}
+            </span>
+          )}
         </div>
-        {/* 第二行小一号 —— 它是"这次怎么算的"，不是"练了什么" */}
+
+        {/* 第三行：这次怎么算的（时长 · 档位 · 热量）。
+            比上面两行再退一档 —— 它是"用来核对的"，不是"用来比的"。 */}
         {detailParts.length > 0 && (
-          <div className="mt-0.5 text-xs text-muted">
+          <div className="mt-1 text-xs text-muted">
             {detailParts.join(' · ')}
           </div>
         )}
@@ -135,34 +199,45 @@ export function SessionCard({
 
       {/* ---------- 点开后的样子 ---------- */}
       {expanded && (
-        <div className="border-t border-line p-3">
+        <div className="animate-fade border-t border-line p-3.5">
           {groups.map((group) => {
             const isCardio = cardioIds.has(group.exerciseId)
             return (
               <div key={group.exerciseId} className="mb-3 last:mb-0">
-                <div className="mb-1 text-sm font-medium text-ink-2">
-                  {group.name}
-                </div>
+                {/* 动作名当"标签"而不是"正文"：它在这一块里是分组标题，
+                    和下面一行行的数据不是一类东西。做小了才像标题，
+                    做大了反而会和每组的"80 kg × 8"抢着被执行。 */}
+                <div className="t-label mb-1.5">{group.name}</div>
                 {group.sets.map((set, index) =>
                   isCardio ? (
                     // 有氧：一条就是一句话，没有组号也没有 RPE
                     <div
                       key={set.id}
-                      className="py-0.5 text-sm text-ink"
+                      className="well mb-1 px-3 py-2 text-sm text-ink"
                     >
-                      {describeCardio(set)}
+                      <span className="t-num">{describeCardio(set)}</span>
                     </div>
                   ) : (
+                    // 和训练页的组记录排法保持一致（组号 / 重量×次数 / RPE）——
+                    // 这样刚记完的训练和翻出来看的老记录，读法是同一个，
+                    // 不用在两套排版之间切换脑子
                     <div
                       key={set.id}
-                      className="flex items-center gap-3 py-0.5 text-sm text-ink"
+                      className="well mb-1 flex items-center gap-2.5 px-3 py-2 text-sm"
                     >
-                      <span className="w-4 text-muted">{index + 1}</span>
-                      <span>
-                        {set.weightKg} kg × {set.reps}
+                      <span className="t-num w-4 shrink-0 text-center text-xs font-medium text-muted">
+                        {index + 1}
+                      </span>
+                      <span className="t-num flex-1 font-medium text-ink">
+                        {set.weightKg}
+                        <span className="ml-0.5 font-normal text-muted">kg</span>
+                        <span className="mx-1 text-muted">×</span>
+                        {set.reps}
                       </span>
                       {set.rpe !== undefined && (
-                        <span className="text-xs text-muted">RPE {set.rpe}</span>
+                        <span className="t-num shrink-0 rounded bg-surface px-1.5 py-0.5 text-xs text-ink-2">
+                          RPE {set.rpe}
+                        </span>
                       )}
                     </div>
                   ),
@@ -171,10 +246,13 @@ export function SessionCard({
             )
           })}
 
+          {/* 删除按钮刻意做得不起眼（灰字、细边、不高亮）——
+              它是个"后悔药"，不该和页面上的正常操作抢注意力。
+              点了之后还有一次系统确认弹窗兜底，所以这儿不用再做得更醒目。 */}
           <button
             type="button"
             onClick={onDelete}
-            className="mt-2 w-full rounded-lg border border-line py-2 text-sm text-muted"
+            className="press mt-1 min-h-11 w-full rounded-lg border border-line-2 text-sm text-muted"
           >
             删除这次训练
           </button>

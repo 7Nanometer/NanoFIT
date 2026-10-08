@@ -46,15 +46,15 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
 
   return (
     // 盖住整个屏幕。flex-col 让下面的列表能自己滚动，搜索框和筛选条固定不动。
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg">
-      <div className="mx-auto flex w-full max-w-[480px] flex-1 flex-col overflow-hidden p-4">
+    <div className="animate-fade fixed inset-0 z-50 flex flex-col bg-bg">
+      <div className="animate-sheet mx-auto flex w-full max-w-[480px] flex-1 flex-col overflow-hidden p-4">
         {/* ---------- 标题栏 ---------- */}
         <div className="mb-3 flex items-center gap-2">
           <h2 className="flex-1 text-lg font-semibold">选一个动作</h2>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 rounded-lg border border-line px-4 text-sm text-ink-2"
+            className="press min-h-11 rounded-lg border border-line-2 px-4 text-sm text-ink-2"
           >
             取消
           </button>
@@ -66,7 +66,7 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="搜索动作名或器械…"
-          className="mb-3 w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
+          className="mb-3 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
         />
 
         {/* ---------- 肌群筛选条 ---------- */}
@@ -77,7 +77,7 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
             className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
               filter === 'all'
                 ? 'border-brand bg-brand font-semibold text-on-brand'
-                : 'border-line text-ink-2'
+                : 'border-line-2 text-ink-2'
             }`}
           >
             全部
@@ -93,7 +93,7 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
               className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
                 filter === group
                   ? 'border-brand bg-brand font-semibold text-on-brand'
-                  : 'border-line text-ink-2'
+                  : 'border-line-2 text-ink-2'
               }`}
             >
               {MUSCLE_LABELS[group]}
@@ -108,7 +108,7 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
               key={item.id}
               type="button"
               onClick={() => onPick(item.id)}
-              className="mb-2 flex w-full items-center gap-2 rounded-xl border border-line bg-surface p-3 text-left"
+              className="press mb-2 flex w-full items-center gap-2 card p-3 text-left"
             >
               <div className="flex-1">
                 <div className="font-medium text-ink">{item.name}</div>

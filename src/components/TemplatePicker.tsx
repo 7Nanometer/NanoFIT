@@ -25,14 +25,14 @@ export function TemplatePicker({
   const templates = mergeTemplates(customTemplates)
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg">
-      <div className="mx-auto flex w-full max-w-[480px] flex-1 flex-col overflow-hidden p-4">
+    <div className="animate-fade fixed inset-0 z-50 flex flex-col bg-bg">
+      <div className="animate-sheet mx-auto flex w-full max-w-[480px] flex-1 flex-col overflow-hidden p-4">
         <div className="mb-1 flex items-center gap-2">
           <h2 className="flex-1 text-lg font-semibold">套用一个模板</h2>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 rounded-lg border border-line px-4 text-sm text-ink-2"
+            className="press min-h-11 rounded-lg border border-line-2 px-4 text-sm text-ink-2"
           >
             取消
           </button>
@@ -47,7 +47,7 @@ export function TemplatePicker({
               key={template.id}
               type="button"
               onClick={() => onPick(template)}
-              className="mb-2 w-full rounded-xl border border-line bg-surface p-3 text-left"
+              className="press mb-2 w-full card p-3 text-left"
             >
               <div className="flex items-center gap-2">
                 <span className="flex-1 font-medium text-ink">

@@ -352,8 +352,9 @@ export function StatsScreen() {
           一张空图配上一条 0 到 1 的刻度，看着就像 App 坏了。 */}
       {durationPoints.length > 0 && (
         <>
-          <h2 className="mb-2 mt-5 text-sm font-medium text-ink-2">
-            训练时长
+          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+            <span className="t-label">训练时长</span>
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
           </h2>
           <ProgressChart
             points={durationPoints}
@@ -376,14 +377,15 @@ export function StatsScreen() {
           显示一个没有选项的下拉框只会让人以为坏了。 */}
       {usedExercises.length > 0 && (
         <>
-          <h2 className="mb-2 mt-5 text-sm font-medium text-ink-2">
-            单个动作的进步
+          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+            <span className="t-label">单个动作的进步</span>
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
           </h2>
 
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
-            className="mb-3 w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
+            className="mb-3 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
           >
             {usedExercises.map((e) => (
               <option key={e.id} value={e.id}>
@@ -438,7 +440,7 @@ export function StatsScreen() {
                   <OneRmChart points={oneRmPoints} name={selectedName} />
                   {/* 这段说明不是客套话。不知道口径的人会把它当成
                       "我当天最好的成绩"，然后觉得数字偏低。 */}
-                  <p className="mt-1 rounded-xl border border-line bg-surface p-3 text-xs text-muted">
+                  <p className="mt-1 card p-3 text-xs text-muted">
                     曲线画的是"截至那天，往前 90 天里最好的水平"，
                     不是当天最好那一组 —— 所以它反映的是能力的变化，
                     不会因为今天练法不同就上下跳。
@@ -450,7 +452,7 @@ export function StatsScreen() {
                   </p>
                 </>
               ) : (
-                <p className="rounded-xl border border-line bg-surface p-3 text-center text-sm text-muted">
+                <p className="card p-3 text-center text-sm text-muted">
                   再练几次就能看到趋势
                   {oneRmPoints.length === 0 && (
                     <>
@@ -474,7 +476,10 @@ export function StatsScreen() {
           一个指标"的由来）。 */}
       {(cardioSec > 0 || cardioPoints.length > 0) && (
         <>
-          <h2 className="mb-2 mt-5 text-sm font-medium text-ink-2">有氧</h2>
+          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+            <span className="t-label">有氧</span>
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+          </h2>
 
           <div className="mb-3 flex gap-2">
             <StatTile
@@ -504,10 +509,11 @@ export function StatsScreen() {
           显示一堆 0 或者"—"只会让人以为是坏的。 */}
       {weightKg === undefined ? (
         <>
-          <h2 className="mb-2 mt-5 text-sm font-medium text-ink-2">
-            消耗热量
+          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+            <span className="t-label">消耗热量（估算）</span>
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
           </h2>
-          <p className="rounded-xl border border-line bg-surface p-3 text-sm text-muted">
+          <p className="card p-3 text-sm text-muted">
             填个体重就能看到热量统计。
             <br />
             去「设置 → 默认体重」填一个，或者在「设置 → 身体数据」里记一次
@@ -516,8 +522,9 @@ export function StatsScreen() {
         </>
       ) : (
         <>
-          <h2 className="mb-2 mt-5 text-sm font-medium text-ink-2">
-            消耗热量（估算）
+          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+            <span className="t-label">消耗热量（估算）</span>
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
           </h2>
 
           <div className="mb-3 flex gap-2">
@@ -542,13 +549,13 @@ export function StatsScreen() {
           <button
             type="button"
             onClick={() => setShowFormula(!showFormula)}
-            className="mb-3 min-h-11 w-full rounded-lg border border-line px-3 text-sm text-ink-2"
+            className="press mb-3 min-h-11 w-full rounded-lg border border-line-2 px-3 text-sm text-ink-2"
           >
             {showFormula ? '收起算式' : '这些数是怎么算出来的？'}
           </button>
 
           {showFormula && (
-            <div className="mb-3 rounded-xl border border-line bg-surface p-3 text-xs text-muted">
+            <div className="mb-3 card p-3 text-xs text-muted">
               <div className="text-ink-2">用到的数据</div>
               <div className="mt-0.5">
                 体重 {weightKg} kg（
@@ -658,7 +665,7 @@ export function StatsScreen() {
           {/* 这段说明不是客套话，是这个功能的一部分。
               热量是估的，界面上必须说清楚 —— 不写的话，
               主人拿它跟手环一对数字发现差很多，会以为是算错了。 */}
-          <p className="mt-1 rounded-xl border border-line bg-surface p-3 text-xs text-muted">
+          <p className="mt-1 card p-3 text-xs text-muted">
             这是估算值，不含运动后持续燃烧的部分。
             <br />
             算法是（MET − 1）× 体重 × 时长，减掉 1 是为了刨去"躺着也要烧"
@@ -673,8 +680,9 @@ export function StatsScreen() {
       {/* ---------- 6. 身体数据 ---------- */}
       {(hasWeight || hasFat || hasHeight) && (
         <>
-          <h2 className="mb-2 mt-5 text-sm font-medium text-ink-2">
-            身体数据
+          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+            <span className="t-label">身体数据</span>
+            <span className="h-px flex-1 bg-line" aria-hidden="true" />
           </h2>
 
           {hasWeight && (

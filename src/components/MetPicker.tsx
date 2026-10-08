@@ -96,8 +96,8 @@ export function MetPicker({
 
   return (
     // 半透明遮罩 + 居中面板，和"新建动作""记一次有氧"同一套写法
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-full w-full max-w-[440px] overflow-y-auto rounded-2xl border border-line bg-surface p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="animate-pop max-h-full w-full max-w-[440px] overflow-y-auto card rounded-2xl p-5">
         <h2 className="mb-1 text-lg font-semibold text-ink">
           结束今天的训练？
         </h2>
@@ -118,7 +118,7 @@ export function MetPicker({
             顺手把开始时间改了，不需要另外记住去点什么东西。
             为什么不做成"开始计时"按钮：那样会忘，一忘就是整场没计时；
             自动开始最多差十几分钟，而且随时能改。 */}
-        <div className="mb-3 rounded-lg border border-line bg-bg p-3">
+        <div className="mb-3 well p-3">
           <div className="text-sm text-ink">
             本次训练{' '}
             <span className="font-semibold">
@@ -165,7 +165,7 @@ export function MetPicker({
                 className={`flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 text-left text-sm ${
                   active
                     ? 'border-brand bg-brand font-semibold text-on-brand'
-                    : 'border-line text-ink-2'
+                    : 'border-line-2 text-ink-2'
                 }`}
               >
                 {/* flex-1 把档位名撑开，后面的东西自然被推到右边 */}
@@ -213,14 +213,14 @@ export function MetPicker({
           <button
             type="button"
             onClick={() => setLevel(lastLevel)}
-            className="mb-3 min-h-11 w-full rounded-lg border border-line px-3 text-sm text-ink-2"
+            className="press mb-3 min-h-11 w-full rounded-lg border border-line-2 px-3 text-sm text-ink-2"
           >
             沿用上次：{metLabel(lastLevel)}
           </button>
         )}
 
         {/* ---------- 这次练了什么 ---------- */}
-        <div className="mb-4 rounded-lg border border-line bg-bg p-3 text-sm text-ink-2">
+        <div className="mb-4 well p-3 text-sm text-ink-2">
           {summary}
         </div>
 
@@ -229,14 +229,14 @@ export function MetPicker({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-11 flex-1 rounded-lg border border-line text-ink-2"
+            className="press min-h-11 flex-1 rounded-lg border border-line-2 text-ink-2"
           >
             取消
           </button>
           <button
             type="button"
             onClick={() => onConfirm(level)}
-            className="min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand"
+            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand"
           >
             结束训练
           </button>

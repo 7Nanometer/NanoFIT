@@ -43,8 +43,8 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
 
   return (
     // 半透明的黑遮罩，盖住整个屏幕，让用户知道这里是弹窗、后面点不了
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-full w-full max-w-[440px] overflow-y-auto rounded-2xl border border-line bg-surface p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="animate-pop max-h-full w-full max-w-[440px] overflow-y-auto card rounded-2xl p-5">
         <h2 className="mb-4 text-lg font-semibold text-ink">新建动作</h2>
 
         {/* ---------- 动作名称 ---------- */}
@@ -56,7 +56,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="例如：坐姿推肩"
-          className="mb-4 w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-ink outline-none focus:border-brand"
+          className="mb-4 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
         />
 
         {/* ---------- 肌群 ---------- */}
@@ -71,7 +71,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
               className={`min-h-11 rounded-lg border px-3 text-sm ${
                 muscleGroup === group
                   ? 'border-brand bg-brand font-semibold text-on-brand'
-                  : 'border-line text-ink-2'
+                  : 'border-line-2 text-ink-2'
               }`}
             >
               {MUSCLE_LABELS[group]}
@@ -88,7 +88,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
           value={equipment}
           onChange={(e) => setEquipment(e.target.value)}
           placeholder="例如：哑铃 / 固定器械 / 自重"
-          className="mb-4 w-full rounded-lg border border-line bg-bg px-3 py-2.5 text-ink outline-none focus:border-brand"
+          className="mb-4 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
         />
 
         {/* ---------- 动作要领 ---------- */}
@@ -100,7 +100,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
           onChange={(e) => setNote(e.target.value)}
           rows={2}
           placeholder="例如：肘贴近身体，别耸肩"
-          className="mb-5 w-full resize-none rounded-lg border border-line bg-bg px-3 py-2.5 text-ink outline-none focus:border-brand"
+          className="mb-5 w-full resize-none rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
         />
 
         {/* ---------- 底部两个按钮 ---------- */}
@@ -108,7 +108,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-11 flex-1 rounded-lg border border-line text-ink-2"
+            className="press min-h-11 flex-1 rounded-lg border border-line-2 text-ink-2"
           >
             取消
           </button>
@@ -116,7 +116,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand disabled:opacity-40"
+            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand disabled:opacity-40"
           >
             保存
           </button>

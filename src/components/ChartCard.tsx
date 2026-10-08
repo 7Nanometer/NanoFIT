@@ -36,10 +36,13 @@ export function ChartCard({ title, subtitle, children, rows, columns }: Props) {
   const numbersMode = showNumbers && canToggle
 
   return (
-    <div className="mb-3 rounded-xl border border-line bg-surface p-3">
-      <div className="mb-2 flex items-start gap-2">
+    <div className="mb-3 card p-3.5">
+      <div className="mb-2.5 flex items-start gap-2">
         <div className="flex-1">
-          <h3 className="text-sm font-medium text-ink">{title}</h3>
+          {/* 标题升到 text-base（15px）半粗 —— 它是这张图的"名字"，
+              要和下面的说明文字（12px 灰色）拉开。
+              小一号的标题配一大段说明，读起来会像"全是正文"。 */}
+          <h3 className="text-base font-semibold text-ink">{title}</h3>
           {subtitle !== undefined && (
             <p className="mt-0.5 text-xs text-muted">{subtitle}</p>
           )}
@@ -48,7 +51,10 @@ export function ChartCard({ title, subtitle, children, rows, columns }: Props) {
           <button
             type="button"
             onClick={() => setShowNumbers(!showNumbers)}
-            className="min-h-9 shrink-0 rounded-lg border border-line px-3 text-xs text-ink-2"
+            // 这个按钮从 min-h-9（36px）提到 min-h-11（44px）——
+            // 36px 低于项目铁律里"手指点得准的最小尺寸"那条线，
+            // 而这个按钮正好在卡片右上角，单手拿着手机时正是最难够的地方。
+            className="press min-h-11 shrink-0 rounded-lg border border-line-2 px-3 text-xs text-ink-2"
           >
             {numbersMode ? '看图' : '看数字'}
           </button>

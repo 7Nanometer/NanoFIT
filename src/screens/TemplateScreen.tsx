@@ -69,15 +69,27 @@ export function TemplateScreen({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="min-h-11 rounded-lg border border-line px-3 text-sm text-ink-2"
+          className="press inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-2"
         >
-          ‹ 返回
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0"
+          >
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+          返回
         </button>
         <h1 className="flex-1 text-lg font-semibold">训练模板</h1>
         <button
           type="button"
           onClick={() => setEditing({ id: newId(), name: '', items: [] })}
-          className="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand"
+          className="press min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand"
         >
           + 新建
         </button>
@@ -96,23 +108,53 @@ export function TemplateScreen({ onBack }: { onBack: () => void }) {
         return (
           <div
             key={template.id}
-            className="mb-2 rounded-xl border border-line bg-surface"
+            className="mb-2 card"
           >
             <button
               type="button"
               onClick={() => setExpandedId(expanded ? null : template.id)}
-              className="w-full p-3 text-left"
+              className="press w-full p-3.5 text-left"
             >
               <div className="flex items-center gap-2">
-                <span className="flex-1 font-medium text-ink">
+                <span className="flex-1 truncate text-lg font-semibold text-ink">
                   {template.name}
                 </span>
                 {isPreset && (
-                  <span className="shrink-0 text-xs text-muted">预置</span>
+                  // 做成小胶囊而不是一行灰字：它是个"标签"，
+                  // 标签就该有个边界，不然会跟旁边的文字糊成一句
+                  <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-muted">
+                    预置
+                  </span>
                 )}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ease-mech ${
+                    expanded ? 'rotate-180' : ''
+                  }`}
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
               </div>
-              <div className="mt-1 text-sm text-muted">
-                {template.items.length} 个动作
+              {/* 【为什么要把动作名勾出来】
+                  以前收起时这行只有"5 个动作" —— 于是"推日""拉日""腿日"
+                  三张卡片长得一模一样，必须点开才知道哪个是哪个。
+                  把动作名当预览文字铺在这儿，不用点开就能认出来。 */}
+              <div className="mt-1 flex items-center gap-1.5 text-xs">
+                <span className="t-num shrink-0 font-medium text-ink-2">
+                  {template.items.length} 个动作
+                </span>
+                <span className="shrink-0 text-muted">·</span>
+                <span className="truncate text-muted">
+                  {template.items
+                    .map((item) => exerciseName(allExercises, item.exerciseId))
+                    .join('、')}
+                </span>
               </div>
             </button>
 
@@ -141,14 +183,14 @@ export function TemplateScreen({ onBack }: { onBack: () => void }) {
                     <button
                       type="button"
                       onClick={() => setEditing(template)}
-                      className="min-h-11 flex-1 rounded-lg border border-line text-sm text-ink-2"
+                      className="press min-h-11 flex-1 rounded-lg border border-line-2 text-sm text-ink-2"
                     >
                       编辑
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteTemplate(template.id)}
-                      className="min-h-11 flex-1 rounded-lg border border-line text-sm text-muted"
+                      className="press min-h-11 flex-1 rounded-lg border border-line-2 text-sm text-muted"
                     >
                       删除
                     </button>
@@ -207,7 +249,7 @@ function TemplateEditor({
         <button
           type="button"
           onClick={onCancel}
-          className="min-h-11 rounded-lg border border-line px-3 text-sm text-ink-2"
+          className="press inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-2"
         >
           取消
         </button>
@@ -220,7 +262,7 @@ function TemplateEditor({
           onClick={() =>
             onSave({ ...initial, name: name.trim(), items })
           }
-          className="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-40"
+          className="press min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand disabled:opacity-40"
         >
           保存
         </button>
@@ -232,13 +274,13 @@ function TemplateEditor({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="例如：我的推日"
-        className="mb-4 w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
+        className="mb-4 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
       />
 
       {items.map((item, index) => (
         <div
           key={item.exerciseId}
-          className="mb-2 rounded-xl border border-line bg-surface p-3"
+          className="mb-2 card p-3"
         >
           <div className="mb-2 flex items-center gap-2">
             <span className="flex-1 font-medium text-ink">
@@ -270,7 +312,7 @@ function TemplateEditor({
       <button
         type="button"
         onClick={() => setPickerOpen(true)}
-        className="w-full rounded-xl border border-dashed border-line py-4 text-sm text-ink-2"
+        className="press w-full rounded-xl border border-dashed border-line py-4 text-sm text-ink-2"
       >
         + 添加动作
       </button>
@@ -311,7 +353,7 @@ function Stepper({
       <button
         type="button"
         onClick={() => onChange(Math.max(1, value - 1))}
-        className="min-h-11 min-w-11 rounded-lg border border-line text-lg text-ink-2"
+        className="press min-h-11 min-w-11 rounded-lg border border-line-2 text-lg text-ink-2"
       >
         −
       </button>
@@ -321,7 +363,7 @@ function Stepper({
       <button
         type="button"
         onClick={() => onChange(Math.min(99, value + 1))}
-        className="min-h-11 min-w-11 rounded-lg border border-line text-lg text-ink-2"
+        className="press min-h-11 min-w-11 rounded-lg border border-line-2 text-lg text-ink-2"
       >
         +
       </button>

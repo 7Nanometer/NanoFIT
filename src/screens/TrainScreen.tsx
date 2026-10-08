@@ -15,11 +15,12 @@ import { newId } from '../lib/id'
 import { dateKey, formatDateCN, formatTimeCN, parseISO, todayKey } from '../lib/date'
 import {
   describeCardio,
+  formatClock,
   formatDuration,
   sessionVolume,
   textToNumber,
 } from '../lib/calc'
-import { unlockAudio } from '../lib/beep'
+import { tapFeedback, unlockAudio } from '../lib/beep'
 import {
   DEFAULT_MET_LEVEL,
   isStaleSession,
@@ -50,6 +51,7 @@ import {
 import { CardioForm } from '../components/CardioForm'
 import { ElapsedBadge } from '../components/ElapsedBadge'
 import { MetPicker } from '../components/MetPicker'
+import { Readout, ReadoutCell } from '../components/Readout'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { RestTimer } from '../components/RestTimer'
 import { SetRow } from '../components/SetRow'
@@ -185,19 +187,8 @@ export function TrainScreen() {
     .filter((s) => cardioIds.has(s.exerciseId))
     .reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
 
-  // 顶部那行小结：有几样说几样，没有的那一项整个不出现
+  // 顶部那排读数：有几样说几样，没有的那一项整个不出现
   // （只练了有氧时不显示"0 组 · 总容量 0 kg"）
-  const summaryParts: string[] = []
-  if (strengthEntries.length > 0) {
-    summaryParts.push(
-      `${strengthEntries.length} 组 · 总容量 ${sessionVolume(
-        strengthEntries,
-      ).toLocaleString()} kg`,
-    )
-  }
-  if (cardioSeconds > 0) {
-    summaryParts.push(`有氧 ${formatDuration(cardioSeconds)}`)
-  }
   const hasEntries = entries.length > 0
 
   // 结束训练那个弹窗里的一句话。
@@ -732,38 +723,108 @@ export function TrainScreen() {
 
   return (
     <div>
-      {/* ---------- 顶部：日期 / 小结 / 结束按钮 ---------- */}
-      <div className="mb-4 flex items-start gap-2">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">
-            {formatDateCN(session?.date ?? today)}
-            {/* ---------- 已练多久（★ 2026-09-24 加的）----------
-                计时器在这个小组件**里面**，所以每 5 秒只重画这一小块，
-                不会把整页几十张卡片跟着重画。
-                只要 startedAt 存在就显示 —— 包括"加了动作还没记第一组"那段，
-                因为计时确实是从加第一个动作就开始了。 */}
-            {session !== null && session.startedAt !== undefined && (
-              <ElapsedBadge
-                startedAt={session.startedAt}
-                stale={showStaleWarning}
-                lastSetISO={staleLastISO}
+      {/* ---------- 顶部仪表盘 ---------- */}
+      <header className="mb-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {/* ---------- 状态灯 ----------
+                没开始训练时是一颗不亮的灰点；开始之后变成青色的、
+                一呼一吸地亮着 —— 就是器械面板上"通电了"的那颗灯。
+                它顺手解决了一个老问题：以前这一屏看不出"到底开始记了没有"，
+                而"已练多久"那个数却已经在跑了，看着像出错了。 */}
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                  session !== null
+                    ? 'animate-pulse bg-cyan shadow-[0_0_8px_var(--color-cyan)]'
+                    : 'bg-muted'
+                }`}
               />
+              <span className="t-label">
+                {session !== null ? '训练中' : '未开始'}
+              </span>
+            </div>
+
+            {/* t-num 让日期里的数字等宽：跨天时整行不会左右挪一下 */}
+            <h1 className="t-num mt-1.5 text-2xl font-bold">
+              {formatDateCN(session?.date ?? today)}
+            </h1>
+
+            {/* 套用模板时这次训练会带个名字（比如"推日"）。
+                以前它藏在"历史"页里，训练中途看不到 —— 现在摆出来。 */}
+            {session?.name !== undefined && (
+              <p className="mt-0.5 truncate text-sm text-ink-2">
+                {session.name}
+              </p>
             )}
-          </h1>
-          <p className="mt-0.5 text-sm text-muted">
-            {hasEntries ? summaryParts.join(' · ') : '还没开始记'}
-          </p>
+          </div>
+
+          {session !== null && (
+            <button
+              type="button"
+              onClick={finishWorkout}
+              className="press min-h-11 shrink-0 rounded-lg border border-line-2 px-3.5 text-sm text-ink-2"
+            >
+              {hasEntries ? '结束训练' : '清空'}
+            </button>
+          )}
         </div>
-        {session !== null && (
-          <button
-            type="button"
-            onClick={finishWorkout}
-            className="min-h-11 shrink-0 rounded-lg border border-line px-3 text-sm text-ink-2"
-          >
-            {hasEntries ? '结束训练' : '清空'}
-          </button>
+
+        {/* ---------- 读数条 ----------
+            把"练了几组 / 总共多少公斤 / 有氧多久 / 已练多久"四件事，
+            从一句话拆成几格读数。
+            以前那句「6 组 · 总容量 2,929.5 kg · 有氧 20 分钟」得一个字一个字读，
+            而且"已练多久"是塞在标题旁边的一行小灰字 ——
+            全屏第二重要的数字，却被埋得最深的那个位置。
+            现在每个数字单独一格、标签压在小字上，扫一眼就抓到。
+
+            【为什么把"已练多久"放在最后】
+            它是唯一每 5 秒会跳一下的东西。放在最右边，
+            跳动的数字就不会推着左边的文字跟着晃。
+
+            【ElapsedBadge 为什么能当一格用】
+            计时器在这个小组件**里面**，所以每 5 秒只重画这一格，
+            不会把整页几十张卡片跟着重画。 */}
+        {hasEntries && session !== null && (
+          <div className="mt-4">
+            <Readout>
+              {strengthEntries.length > 0 && (
+                <ReadoutCell
+                  label="组数"
+                  value={String(strengthEntries.length)}
+                />
+              )}
+              {/* 单位 kg 并到标签里去了，不占数字那一行的宽度 ——
+                  375px 的屏幕上四格并排，每一格只有 70 来个像素可用。
+                  数字也取整：读数条是"扫一眼"的地方，
+                  "2,929.5"里那个 .5 在这儿没人会去用，却要多占一格宽度。
+                  （历史页里还是带小数的，那里是"核对"的地方，精度该留着。） */}
+              {/* 标签写"容量 kg"而不是"总容量 kg" ——
+                  少一个字，是为了在最窄的手机上不被裁掉。
+                  "容量"本身也就是这个指标的名字（见 CLAUDE.md 的公式），
+                  并没有因为少了个"总"而变得看不懂。 */}
+              {strengthEntries.length > 0 && (
+                <ReadoutCell
+                  label="容量 kg"
+                  value={Math.round(
+                    sessionVolume(strengthEntries),
+                  ).toLocaleString()}
+                />
+              )}
+              {cardioSeconds > 0 && (
+                <ReadoutCell label="有氧" value={formatClock(cardioSeconds)} />
+              )}
+              {session.startedAt !== undefined && (
+                <ElapsedBadge
+                  startedAt={session.startedAt}
+                  stale={showStaleWarning}
+                  lastSetISO={staleLastISO}
+                />
+              )}
+            </Readout>
+          </div>
         )}
-      </div>
+      </header>
 
       {/* ---------- 练完忘了点"结束训练"（★ 2026-09-24 加的）----------
           这条必须说清楚，因为系统接下来做的事和用户以为的不一样：
@@ -786,18 +847,18 @@ export function TrainScreen() {
             )}
             {staleLastISO === undefined && '。'}
           </p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2.5 flex gap-2">
             <button
               type="button"
               onClick={finishWorkout}
-              className="min-h-11 flex-1 rounded-lg bg-brand px-3 text-sm font-semibold text-on-brand"
+              className="press min-h-11 flex-1 rounded-lg bg-brand px-3 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)]"
             >
               结束这次训练
             </button>
             <button
               type="button"
               onClick={discardStaleSession}
-              className="min-h-11 shrink-0 rounded-lg border border-line px-3 text-sm text-ink-2"
+              className="press min-h-11 shrink-0 rounded-lg border border-line-2 px-3 text-sm text-ink-2"
             >
               丢弃
             </button>
@@ -816,6 +877,11 @@ export function TrainScreen() {
       {restEndsAt !== null && (
         <RestTimer
           endsAt={restEndsAt}
+          // 进度环的分母。settings 是这一页挂载时读一次的，
+          // 够用 —— 休息中途去改时长是极罕见的情况，
+          // 而且真改了也只是环的样子略有偏差，剩余秒数照样是准的
+          // （那个数是照着 endsAt 现算的，见上面）。
+          totalSec={settings.restSec}
           onClose={clearRest}
           notifyHint={notifyHint}
           onEnableNotify={notifyAction}
@@ -823,7 +889,7 @@ export function TrainScreen() {
       )}
 
       {/* ---------- 每个动作一张卡片 ---------- */}
-      {exerciseIds.map((id) => {
+      {exerciseIds.map((id, index) => {
         const exercise = allExercises.find((e) => e.id === id)
         const sets = (session?.entries ?? []).filter((s) => s.exerciseId === id)
         // 这个动作有没有来自模板的"目标几组几次"
@@ -833,6 +899,7 @@ export function TrainScreen() {
         return (
           <ExerciseCard
             key={id}
+            index={index}
             name={exercise?.name ?? '（已删除的动作）'}
             equipment={exercise?.equipment ?? ''}
             sets={sets}
@@ -850,45 +917,64 @@ export function TrainScreen() {
         )
       })}
 
-      {/* ---------- 添加动作 ---------- */}
-      <button
-        type="button"
-        onClick={() => setPickerOpen(true)}
-        className={`w-full rounded-xl border border-dashed border-line py-4 text-sm text-ink-2 ${
-          exerciseIds.length === 0 ? 'min-h-[120px] text-base' : ''
-        }`}
-      >
-        {exerciseIds.length === 0
-          ? '+ 点这里添加动作，开始今天的训练'
-          : '+ 添加动作'}
-      </button>
+      {/* ---------- 给这次训练加点内容 ----------
+          这一块是"一个主按钮 + 两个次按钮"，不是三个平等的按钮。
 
-      {/* ---------- 记一次有氧 ----------
-          和上面的"添加动作"并排，因为它是同一类操作（都是"给这次训练加点内容"）。
+          【改之前为什么不行】
+          三个按钮都是一样大的虚线框、一样的灰色文字，分量完全一样。
+          眼睛扫过去不知道该点哪个 —— 而实际上"添加动作"的使用频率
+          比另外两个加起来高得多。三个一样重 = 没有重点。
 
-          【为什么有氧要单独一个按钮】
-          它走的是完全不同的表单：只填时长和距离，不填重量和次数。
-          而且在动作库里选动作时，有氧那 11 个是被排除掉的（见 ExercisePicker），
-          所以必须有这么一个专门的入口，否则有氧根本记不了。 */}
-      <button
-        type="button"
-        onClick={() => {
-          setCardioPresetId(undefined)
-          setCardioOpen(true)
-        }}
-        className="mt-2 w-full rounded-xl border border-dashed border-line py-4 text-sm text-ink-2"
-      >
-        + 记有氧
-      </button>
+          【现在怎么分】
+          主按钮用主色（橙红）描边和文字，是这一屏唯一带颜色的操作入口；
+          两个次按钮退成灰色，并且并排缩成半宽。
+          眼睛会自动先看到橙色的那个，这就是"层级"。 */}
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          // 一个动作都没有的时候，它长得更像一块"空状态提示牌"：
+          // 撑得更高、字更大、底色透一点点橙 —— 因为这时候全屏是空的，
+          // 需要有个东西把人拽过来。有动作之后它就收成普通一行，
+          // 不再抢版面（那时候主角是上面那些卡片）。
+          className={`press w-full rounded-xl border border-dashed text-brand ${
+            exerciseIds.length === 0
+              ? 'min-h-[132px] border-brand/40 bg-brand/5 text-lg font-medium'
+              : 'border-brand/30 py-3.5 text-sm font-medium'
+          }`}
+        >
+          {exerciseIds.length === 0
+            ? '+ 添加第一个动作，开始今天的训练'
+            : '+ 添加动作'}
+        </button>
 
-      {/* 一键套用模板：自动把一整套动作和目标组数次数填进来 */}
-      <button
-        type="button"
-        onClick={() => setTemplatePickerOpen(true)}
-        className="mt-2 w-full rounded-xl border border-dashed border-line py-4 text-sm text-ink-2"
-      >
-        套用模板
-      </button>
+        {/* ---------- 两个次要入口 ----------
+            【为什么有氧要单独一个按钮】
+            它走的是完全不同的表单：只填时长和距离，不填重量和次数。
+            而且在动作库里选动作时，有氧那 11 个是被排除掉的（见 ExercisePicker），
+            所以必须有这么一个专门的入口，否则有氧根本记不了。
+
+            【套用模板】一键把一整套动作和目标组数次数填进来。 */}
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setCardioPresetId(undefined)
+              setCardioOpen(true)
+            }}
+            className="press flex-1 rounded-xl border border-dashed border-line py-3.5 text-sm text-ink-2"
+          >
+            + 记有氧
+          </button>
+          <button
+            type="button"
+            onClick={() => setTemplatePickerOpen(true)}
+            className="press flex-1 rounded-xl border border-dashed border-line py-3.5 text-sm text-ink-2"
+          >
+            套用模板
+          </button>
+        </div>
+      </div>
 
       {pickerOpen && (
         <ExercisePicker
@@ -948,6 +1034,7 @@ export function TrainScreen() {
 // ============================================================
 
 function ExerciseCard({
+  index,
   name,
   equipment,
   sets,
@@ -959,6 +1046,8 @@ function ExerciseCard({
   onRemoveExercise,
   onAddMoreCardio,
 }: {
+  // 这张卡在列表里排第几。只用来算入场动画的延迟。
+  index: number
   name: string
   equipment: string
   sets: SetEntry[]
@@ -990,6 +1079,14 @@ function ExerciseCard({
     if (weight === null || reps === null) return
     onAddSet(weight, reps, textToNumber(rpeText))
 
+    // 轻轻"嗒"一下。
+    // 【为什么要放在这一行】
+    // 此刻正处在"用户手指刚点完"的一瞬间，这是手机上唯一允许震动的时机。
+    // 记一组这件事在屏幕上只有"多了一行记录"这一个变化 ——
+    // 有时候你眼睛还在杠铃上，根本没看屏幕。那一下震动就是"记上了"的回执。
+    // 电脑和 iPhone 浏览器上没有这个能力，tapFeedback 内部会自己忽略掉。
+    tapFeedback()
+
     // 【这是"5 秒记一组"的关键】
     // 点完 ✓ 后故意不清空重量和次数 —— 因为下一组通常还是同样的重量。
     // 你可以直接再点一次 ✓ 就记下第二组，只改需要变的那一项。
@@ -997,59 +1094,91 @@ function ExerciseCard({
     setRpeText('')
   }
 
+  // 目标组数练够了没有。练够了进度条会从橙红变成青色 ——
+  // 这套配色的分工是"橙=正在做、青=已完成"（见 index.css 顶部说明），
+  // 所以"完成"不能再用橙色表示，否则两个含义会打架。
+  const plannedDone = planned !== undefined && sets.length >= planned.targetSets
+
   return (
-    <div className="mb-3 rounded-xl border border-line bg-surface p-3">
-      {/* ---------- 动作名 ---------- */}
-      <div className="mb-3 flex items-center gap-2">
-        <div className="flex-1">
-          <div className="font-medium text-ink">{name}</div>
+    <div
+      // 一张一张错开 35 毫秒冒出来，像仪表盘上指示灯逐个点亮。
+      // 【为什么要封顶 Math.min(…, 180)】
+      // 动作多的那天可能有十来个动作。不封顶的话最后一个要等 350 毫秒
+      // 才出现 —— 那已经不叫"入场动画"，那叫"卡了"。
+      className="card animate-rise mb-3 p-3.5"
+      style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
+    >
+      {/* ---------- 卡片头：动作名 + 移除 ---------- */}
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          {/* 动作名用 text-lg（17px）半粗 —— 它是这张卡的标题，
+              必须比卡里所有别的东西都重，否则整张卡是一团平的 */}
+          <div className="truncate text-lg font-semibold text-ink">{name}</div>
           {(equipment !== '' || planned !== undefined) && (
             <div className="mt-0.5 text-xs text-muted">
               {equipment}
               {equipment !== '' && planned !== undefined && ' · '}
-              {planned !== undefined && (
-                <>
-                  目标 {planned.targetSets} 组 × {planned.targetReps} 次 ·{' '}
-                  <span
-                    className={
-                      sets.length >= planned.targetSets
-                        ? 'font-semibold text-brand'
-                        : undefined
-                    }
-                  >
-                    {sets.length}/{planned.targetSets}
-                  </span>
-                </>
-              )}
+              {planned !== undefined &&
+                `目标 ${planned.targetSets} 组 × ${planned.targetReps} 次`}
             </div>
           )}
         </div>
         <button
           type="button"
           onClick={onRemoveExercise}
-          className="shrink-0 rounded-lg px-2 py-1 text-xs text-muted"
+          // -mr-1 -mt-1 把按钮往角上推一点，视觉上贴着边，
+          // 但点击区本身保持了 44px 高（项目铁律：手指点得准的最小尺寸）
+          className="press -mr-1 -mt-1 min-h-11 shrink-0 rounded-lg px-2.5 text-xs text-muted"
         >
           移除动作
         </button>
       </div>
 
+      {/* ---------- 计划进度条 ----------
+          以前"3/4"是挤在设备名那一行末尾的一个小数，根本没人看得见。
+          现在把它单独拎成一根进度条 —— 器械上的"当前进度"就是这么显示的，
+          比数字更直接：一眼看出还差几组，不用算。 */}
+      {planned !== undefined && (
+        <div className="mt-2.5 flex items-center gap-2.5">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
+            <div
+              // transition-[width]：进度是"长"过去的，不是"跳"过去的。
+              // 300ms 配合 ease-mech（起步快、收尾稳），看着结实不飘。
+              className={`h-full rounded-full transition-[width] duration-300 ease-mech ${
+                plannedDone ? 'bg-cyan' : 'bg-brand'
+              }`}
+              // 练超了也不让条子冲出边界（Math.min 压在 100%）
+              style={{
+                width: `${Math.min(100, (sets.length / planned.targetSets) * 100)}%`,
+              }}
+            />
+          </div>
+          <span
+            className={`t-num shrink-0 text-xs font-semibold ${
+              plannedDone ? 'text-cyan' : 'text-ink-2'
+            }`}
+          >
+            {sets.length}/{planned.targetSets}
+          </span>
+        </div>
+      )}
+
       {/* ---------- 下半截：有氧和力量在这里分道扬镳 ---------- */}
+      {/* 组记录和输入行之间空 12px，和卡片头之间也是 12px ——
+          这样"上面是标题、中间是记录、下面是输入"三段的节奏是一致的 */}
       {isCardio ? (
-        <>
+        <div className="mt-3">
           {/* 有氧每条就是一句话，没有组号也没有 RPE */}
           {sets.map((s) => (
             <div
               key={s.id}
-              className="mb-2 flex items-center gap-2 rounded-lg bg-bg px-3 py-2 text-sm"
+              // animate-rise：这一条是刚"长"出来的，不是突然出现的。
+              // 只对新加的那一条生效 —— 因为 React 认得 key，
+              // 老的那些元素没被重建，动画就不会重放。
+              className="well animate-rise mb-1.5 flex min-h-11 items-center gap-2 px-3 text-sm"
             >
-              <span className="flex-1 text-ink">{describeCardio(s)}</span>
-              <button
-                type="button"
-                onClick={() => onRemoveSet(s.id)}
-                className="shrink-0 px-1 text-muted"
-              >
-                ×
-              </button>
+              <span className="t-num flex-1 text-ink">{describeCardio(s)}</span>
+              <RemoveSetButton onClick={() => onRemoveSet(s.id)} />
             </div>
           ))}
 
@@ -1057,33 +1186,41 @@ function ExerciseCard({
           <button
             type="button"
             onClick={onAddMoreCardio}
-            className="mt-3 min-h-11 w-full rounded-lg border border-dashed border-line text-sm text-ink-2"
+            className="press mt-2.5 min-h-11 w-full rounded-lg border border-dashed border-line text-sm text-ink-2"
           >
             + 再记一次
           </button>
-        </>
+        </div>
       ) : (
-        <>
-          {/* ---------- 已经记好的组 ---------- */}
+        <div className="mt-3">
+          {/* ---------- 已经记好的组 ----------
+              每一行是"组号 / 重量×次数 / RPE / 删"，四样各占一个位置：
+              组号和 RPE 宽度固定，重量那一格吃掉剩下的空间。
+              结果是所有行的数字都落在同一条竖线上 —— 斜着一扫就能看出
+              哪一组掉了重量，不用一行一行读。 */}
           {sets.map((s, index) => (
             <div
               key={s.id}
-              className="mb-2 flex items-center gap-2 rounded-lg bg-bg px-3 py-2 text-sm"
+              className="well animate-rise mb-1.5 flex min-h-11 items-center gap-2.5 px-3 text-sm"
             >
-              <span className="w-4 shrink-0 text-muted">{index + 1}</span>
-              <span className="flex-1 text-ink">
-                {s.weightKg} kg × {s.reps}
+              <span className="t-num w-4 shrink-0 text-center text-xs font-medium text-muted">
+                {index + 1}
+              </span>
+              <span className="t-num flex-1 font-medium text-ink">
+                {s.weightKg}
+                {/* 单位单独用小字浅色：它每行都一样，不该和数字抢分量 */}
+                <span className="ml-0.5 font-normal text-muted">kg</span>
+                <span className="mx-1 text-muted">×</span>
+                {s.reps}
               </span>
               {s.rpe !== undefined && (
-                <span className="shrink-0 text-xs text-muted">RPE {s.rpe}</span>
+                // RPE 做成小胶囊：它一眼就能被认出是"附加信息"，
+                // 不会和重量次数混在一起读成一句
+                <span className="t-num shrink-0 rounded bg-surface px-1.5 py-0.5 text-xs text-ink-2">
+                  RPE {s.rpe}
+                </span>
               )}
-              <button
-                type="button"
-                onClick={() => onRemoveSet(s.id)}
-                className="shrink-0 px-1 text-muted"
-              >
-                ×
-              </button>
+              <RemoveSetButton onClick={() => onRemoveSet(s.id)} />
             </div>
           ))}
 
@@ -1101,9 +1238,32 @@ function ExerciseCard({
               canConfirm={canConfirm}
             />
           </div>
-        </>
+        </div>
       )}
     </div>
+  )
+}
+
+// 删掉某一组的那个「×」
+//
+// 【为什么值得单独抽一个组件】
+// 它要满足两个互相打架的要求：看得见的小、点得中的大。
+// 做法是让按钮本身 44×44（项目铁律里手指点得准的最小尺寸），
+// 再用 -mr-2 把它往外推一点，视觉上仍然贴着卡片右边。
+// 抽出来是因为卡片里有两处要用（有氧那一种、力量这一种），
+// 两边各写一遍迟早会写岔。
+function RemoveSetButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      // 按钮里只有一个"×"，读屏软件念出来会是"乘号"，等于没念。
+      // aria-label 是专门给它补一句人话用的（光标悬停时的提示也用它）。
+      aria-label="删掉这一组"
+      className="press -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-base leading-none text-muted"
+    >
+      ×
+    </button>
   )
 }
 

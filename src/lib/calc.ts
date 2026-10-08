@@ -263,6 +263,30 @@ export function formatDuration(sec: number): string {
   return `${hours} 小时 ${minutes} 分`
 }
 
+// 秒 → 秒表样子。1800 → "30:00"，4835 → "1:20:35"
+//
+// 【它和上面 formatDuration 的分工】
+// formatDuration 写的是"人话"（"30 分钟"），用在句子中间最自然 ——
+// 比如历史记录的摘要、有氧的说明，那里是"读到"的。
+//
+// 这个 formatClock 写的是"秒表"，用在【正在跳动的读数】上 ——
+// 训练页顶部"已练"那一格。理由有两个：
+//   1. 它在跳。中文写法的字数是会变的（"9 分钟" → "10 分钟" 宽度不同），
+//      旁边又写着"已练"两个字，等于"已练"重复了两遍，很啰嗦。
+//   2. 秒表是每秒都在动的，配 .t-num（等宽数字）才不会左右抖；
+//      而中文的"分钟"两个字塞在数字中间，等宽就白做了。
+export function formatClock(sec: number): string {
+  const total = Math.max(0, Math.floor(sec))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  // 补零：1 分 5 秒要写成 "1:05" 而不是 "1:5"，否则那一格宽度会跳
+  const mm = String(minutes).padStart(2, '0')
+  const ss = String(seconds).padStart(2, '0')
+  // 不到一小时就不显示小时位，省一格宽度
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${minutes}:${ss}`
+}
+
 // 米 → 人话。不到一公里时说米，更好读
 // （操场上一圈半说"600 米"比说"0.60 公里"自然）
 export function formatDistance(m: number): string {

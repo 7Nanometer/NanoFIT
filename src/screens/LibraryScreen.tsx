@@ -84,15 +84,27 @@ export function LibraryScreen({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="min-h-11 rounded-lg border border-line px-3 text-sm text-ink-2"
+          className="press inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-2"
         >
-          ‹ 返回
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0"
+          >
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+          返回
         </button>
         <h1 className="flex-1 text-lg font-semibold">动作库</h1>
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand"
+          className="press min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand"
         >
           + 新建
         </button>
@@ -111,7 +123,7 @@ export function LibraryScreen({ onBack }: { onBack: () => void }) {
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
         placeholder="搜索动作名或器械…"
-        className="mb-3 w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-ink outline-none focus:border-brand"
+        className="mb-3 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
       />
 
       {/* ---------- 肌群筛选条 ---------- */}
@@ -160,7 +172,7 @@ export function LibraryScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* ---------- 数量提示 ---------- */}
-      <p className="mb-2 text-sm text-muted">
+      <p className="t-label mb-2.5">
         共 {list.length} 个动作
         {/* 预置的数量从数据里数出来，不写死 —— 不然每加一批动作都得回来改这里 */}
         {filter === 'all' &&
@@ -177,10 +189,10 @@ export function LibraryScreen({ onBack }: { onBack: () => void }) {
             type="button"
             // 再点一次就收起来
             onClick={() => setExpandedId(expanded ? null : item.id)}
-            className="mb-2 w-full rounded-xl border border-line bg-surface p-3 text-left"
+            className="press mb-2 w-full card p-3 text-left"
           >
             <div className="flex items-center gap-2">
-              <span className="font-medium text-ink">{item.name}</span>
+              <span className="truncate text-base font-semibold text-ink">{item.name}</span>
               {item.isCustom && (
                 <span className="rounded bg-brand/20 px-1.5 py-0.5 text-xs text-brand">
                   自建
@@ -238,7 +250,7 @@ function FilterChip({
       className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
         active
           ? 'border-brand bg-brand font-semibold text-on-brand'
-          : 'border-line text-ink-2'
+          : 'border-line-2 text-ink-2'
       }`}
     >
       {label}

@@ -44,8 +44,18 @@ export function NumberField({
         onChange(next)
       }}
       placeholder={placeholder}
-      // text-center 让数字居中，看着整齐
-      className={`w-full rounded-lg border border-line bg-bg px-2 py-2.5 text-center text-ink outline-none focus:border-brand ${className}`}
+      // ---------- 造型说明 ----------
+      // t-num      数字等宽：一列输入框里的数才能上下对齐
+      // bg-surface-2 凹槽底：看着像在面板上挖进去一个坑（.well 那个思路）
+      // border-line-2 比一般的分隔线深一档：输入框是"要看清边界"的东西
+      // text-base + font-semibold 填进去的数字要够醒目 ——
+      //   这是你正盯着的那几个数，不能和标签一个分量
+      // placeholder 再压淡一档（muted 已经是全站最淡的字色了，所以再乘 60%）：
+      //   预设值（80、8）只是"上次大概是这个数"的提示。
+      //   它要是和真填进去的字一样实，人会以为已经填好了，直接去点 ✓ ——
+      //   结果记下一组空数据。这个坑在健身房手忙脚乱的时候特别容易踩。
+      // focus 时描边变主色 + 一圈淡淡的光晕，明确告诉你"字打到这里来了"
+      className={`t-num w-full rounded-lg border border-line-2 bg-surface-2 px-2 py-2.5 text-center text-base font-semibold text-ink outline-none transition duration-150 ease-mech placeholder:font-normal placeholder:text-muted/60 focus:border-brand focus:ring-2 focus:ring-brand/25 ${className}`}
     />
   )
 }

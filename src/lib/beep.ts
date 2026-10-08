@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core'
-import { Haptics } from '@capacitor/haptics'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
 // ============================================================
 // 休息结束时"叮"一声 + 震一下
@@ -165,4 +165,37 @@ function vibrateNative(): void {
   setTimeout(() => {
     void Haptics.vibrate({ duration: 400 }).catch(() => {})
   }, 650)
+}
+
+// ============================================================
+// 轻轻"嗒"一下 —— 只给"记完一组"这种操作反馈用
+// ============================================================
+//
+// 【为什么不直接用上面那个 vibrate()】
+// vibrate() 是给"休息结束"用的：两下各 400 毫秒，是**叫你回来**的信号，
+// 必须够重、够难忽略。
+// 但"记一组"是每几十秒就要发生一次的动作 —— 用那个力度会烦死人，
+// 而且真机上手感会明显变拖沓。
+//
+// 【安卓和浏览器为什么分开写】
+// 安卓原生壳能调 Haptics 插件的 impact 档位（Light = 最轻的一档），
+// 输出的是很短很脆的一下，正是"咔哒"该有的样子。
+// 浏览器只有 navigator.vibrate 这个粗糙接口，只能传毫秒数 ——
+// 给 10 毫秒，短到几乎只是"顿一下"，不会烦人。
+// iPhone 的浏览器两者都没有，所以整段都吞掉错误：没震动也照样能记账。
+export function tapFeedback(): void {
+  if (isNative) {
+    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => {
+      // 有的手机被设成静音就完全不震，这不是错误，忽略
+    })
+    return
+  }
+
+  try {
+    if (typeof navigator.vibrate === 'function') {
+      navigator.vibrate(10)
+    }
+  } catch {
+    // 某些环境下调用它会直接抛错，这里兜住，别让它连累"记下这一组"这件正事
+  }
 }

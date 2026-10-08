@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { formatDuration } from '../lib/calc'
+import { formatClock } from '../lib/calc'
 import { parseISO } from '../lib/date'
+import { ReadoutCell } from './Readout'
 
 // ============================================================
-// "已练 XX 分钟" 这枚小徽章
+// "已练多久" —— 仪表读数条上的一格
 // ============================================================
 //
 // 【它是干什么的】
@@ -15,7 +16,7 @@ import { parseISO } from '../lib/date'
 // 【★ 为什么定时器放在这个组件**里面**】
 // 它每 5 秒要重算一次。如果把这个状态放到训练页上，每 5 秒整个训练页
 // 都会重画一遍 —— 而那一页可能有几十张动作卡片、一长串组记录。
-// 状态放在这个小零件里，重画的就只有这一小块。
+// 状态放在这个小零件里，重画的就只有这一格。
 //
 // 【为什么是 5 秒一次】
 // 显示的是分钟，5 秒的误差肉眼看不出来，但比 1 秒一次省得多。
@@ -25,6 +26,9 @@ import { parseISO } from '../lib/date'
 // 也就是最后真会存进去的那个数。不然用户会看到"已练 72 小时"，
 // 而实际上存进去的是 52 分钟，两个数对不上更让人糊涂。
 // 这种情况也不需要每 5 秒重算了（那个数定死了），所以干脆不装定时器。
+//
+// 【为什么显示成 42:18 而不是"42 分钟"】
+// 见 lib/calc.ts 里 formatClock 那段说明。
 // ============================================================
 
 // 多久重算一次（毫秒）
@@ -63,10 +67,15 @@ export function ElapsedBadge({ startedAt, stale, lastSetISO }: Props) {
   const sec = Math.max(0, Math.round((endMs - startMs) / 1000))
 
   return (
-    <span className="ml-2 align-middle text-xs font-normal text-muted">
-      已练 {formatDuration(sec)}
-      {/* 超时的时候标一下，不然用户会觉得"我明明练了很久，怎么才 52 分钟" */}
-      {useLastSet && '（按最后一组算）'}
-    </span>
+    <ReadoutCell
+      // 超时的时候标签要变，不然用户会觉得"我明明练了很久，怎么才 52 分钟"。
+      // 标签位置写不下整句解释，所以压成"末组"两个字 ——
+      // 详细的解释在训练页那条橙色警告里（那段一直都有，没动过）。
+      label={useLastSet ? '已练·按末组' : '已练'}
+      value={formatClock(sec)}
+      // 正在走的时候用主色标出来 —— 这一格是全页唯一"活着"的数字，
+      // 颜色让它和其他只读读数区分开（一眼看出"这是在计时"）。
+      accent={!useLastSet}
+    />
   )
 }

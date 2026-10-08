@@ -150,8 +150,8 @@ export function CardioForm({
 
   return (
     // 半透明遮罩 + 居中的面板，和"新建动作"那个弹窗同一套写法
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-full w-full max-w-[440px] overflow-y-auto rounded-2xl border border-line bg-surface p-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="animate-pop max-h-full w-full max-w-[440px] overflow-y-auto card rounded-2xl p-5">
         <div className="mb-4 flex items-center">
           <h2 className="flex-1 text-lg font-semibold text-ink">记一次有氧</h2>
           <button
@@ -177,7 +177,7 @@ export function CardioForm({
                 className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
                   active
                     ? 'border-brand bg-brand font-semibold text-on-brand'
-                    : 'border-line text-ink-2'
+                    : 'border-line-2 text-ink-2'
                 }`}
               >
                 {item.name}
@@ -232,14 +232,14 @@ export function CardioForm({
                 if (isPaceTextAllowed(next)) setPaceText(next)
               }}
               placeholder="5:30 或 5.5"
-              className="w-full rounded-lg border border-line bg-bg px-2 py-2.5 text-center text-ink outline-none focus:border-brand"
+              className="w-full rounded-lg border border-line-2 bg-surface-2 px-2 py-2.5 text-center text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
             />
           </div>
         )}
 
         {/* ---------- 操场模式（只有跑步类用得上） ---------- */}
         {isRunning && (
-          <div className="mb-4 rounded-lg border border-line p-3">
+          <div className="mb-4 rounded-lg border border-line-2 p-3">
             <label className="flex min-h-11 items-center gap-2 text-sm text-ink-2">
               <input
                 type="checkbox"
@@ -258,7 +258,7 @@ export function CardioForm({
                     <select
                       value={laneText}
                       onChange={(e) => setLaneText(e.target.value)}
-                      className="min-h-11 w-full rounded-lg border border-line bg-bg px-2 text-ink outline-none focus:border-brand"
+                      className="min-h-11 w-full rounded-lg border border-line-2 bg-surface-2 px-2 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
                     >
                       {/* 标准田径场最多 8 道 */}
                       {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
@@ -314,7 +314,7 @@ export function CardioForm({
 
         {/* ---------- 结果预览 ---------- */}
         {durationSec !== null && (
-          <div className="mb-4 rounded-lg border border-line bg-bg p-3 text-sm text-ink-2">
+          <div className="mb-4 well p-3 text-sm text-ink-2">
             {formatDuration(durationSec)}
             {distanceM !== undefined && ` · ${formatDistance(distanceM)}`}
             {pace !== null && ` · 配速 ${formatPace(pace)}/公里`}
@@ -343,7 +343,7 @@ export function CardioForm({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-11 flex-1 rounded-lg border border-line text-ink-2"
+            className="press min-h-11 flex-1 rounded-lg border border-line-2 text-ink-2"
           >
             取消
           </button>
@@ -351,7 +351,7 @@ export function CardioForm({
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand disabled:opacity-40"
+            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand disabled:opacity-40"
           >
             保存
           </button>

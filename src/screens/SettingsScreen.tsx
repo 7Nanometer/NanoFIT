@@ -225,23 +225,23 @@ export function SettingsScreen() {
 
       <div className="space-y-2">
         {/* ---------- 外观：日间 / 夜间 ---------- */}
-        <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="font-medium text-ink">外观</div>
+        <div className="card p-4">
+          <div className="text-lg font-semibold text-ink">外观</div>
           <p className="mt-0.5 text-sm text-muted">
-            日间是白底，夜间是原来的深色。点一下立刻换，也记得住。
+            日间是白底，夜间是深色。点一下立刻换，也记得住。
           </p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3.5 flex gap-2">
             {THEMES.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => changeTheme(t.key)}
-                className={`min-h-11 flex-1 rounded-lg border text-sm ${
+                className={`press min-h-11 flex-1 rounded-lg border text-sm ${
                   // 没选过（undefined）就是夜间 —— 和 index.css 的默认值、
                   // 以及 index.html 里那段防闪白光的脚本保持一致
                   (settings.theme ?? 'dark') === t.key
                     ? 'border-brand bg-brand font-semibold text-on-brand'
-                    : 'border-line text-ink-2'
+                    : 'border-line-2 text-ink-2'
                 }`}
               >
                 {t.label}
@@ -264,7 +264,7 @@ export function SettingsScreen() {
           onClick={() => setRestPickerOpen(!restPickerOpen)}
         />
         {restPickerOpen && (
-          <div className="flex flex-wrap gap-2 rounded-xl border border-line bg-surface p-3">
+          <div className="flex flex-wrap gap-2 card p-3">
             {[30, 45, 60, 90, 120, 150, 180].map((sec) => (
               <button
                 key={sec}
@@ -276,7 +276,7 @@ export function SettingsScreen() {
                 className={`min-h-11 rounded-lg border px-3 text-sm ${
                   settings.restSec === sec
                     ? 'border-brand bg-brand font-semibold text-on-brand'
-                    : 'border-line text-ink-2'
+                    : 'border-line-2 text-ink-2'
                 }`}
               >
                 {sec} 秒
@@ -301,7 +301,7 @@ export function SettingsScreen() {
           onClick={() => setNotifyOpen(!notifyOpen)}
         />
         {notifyOpen && (
-          <div className="space-y-3 rounded-xl border border-line bg-surface p-4">
+          <div className="space-y-3 card p-4">
             {!notifyStatus.native ? (
               <p className="text-xs text-muted">
                 「后台提醒」是把"到点叫我"这件事交给手机系统去办，
@@ -336,7 +336,7 @@ export function SettingsScreen() {
                 {/* 电池优化引导。这一段是【文字说明】，不跳转 ——
                     国内各家的设置页路径又乱又常改，跳过去也不一定落在对的地方，
                     写清楚让你自己点反而更靠谱。 */}
-                <div className="rounded-lg border border-line p-3">
+                <div className="rounded-lg border border-line-2 p-3">
                   <div className="text-sm font-medium text-ink">
                     小米 / 华为 / OPPO / vivo 看这里
                   </div>
@@ -361,7 +361,7 @@ export function SettingsScreen() {
                 <button
                   type="button"
                   onClick={() => void runTest()}
-                  className="min-h-11 w-full rounded-lg border border-line px-4 text-sm text-ink-2"
+                  className="press min-h-11 w-full rounded-lg border border-line-2 px-4 text-sm text-ink-2"
                 >
                   试一下：5 秒后提醒我
                 </button>
@@ -386,7 +386,7 @@ export function SettingsScreen() {
           onClick={() => setWeightPickerOpen(!weightPickerOpen)}
         />
         {weightPickerOpen && (
-          <div className="rounded-xl border border-line bg-surface p-3">
+          <div className="card p-3">
             <p className="mb-2 text-xs text-muted">
               算热量估算用的。在「身体数据」里记过体重的话以那个为准，
               这里只是"从没记过"时的兜底。
@@ -403,7 +403,7 @@ export function SettingsScreen() {
                 type="button"
                 onClick={saveDefaultWeight}
                 disabled={!weightValid}
-                className="min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand disabled:opacity-40"
+                className="press min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand disabled:opacity-40"
               >
                 保存
               </button>
@@ -420,20 +420,35 @@ export function SettingsScreen() {
           onClick={() =>
             saveSettings({ ...settings, rpeEnabled: !settings.rpeEnabled })
           }
-          className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface p-4 text-left"
+          // 【为什么整行都是按钮，还要再标 role 和 aria-checked】
+          // 读屏软件看到 <button> 只会念"记录 RPE"，不会告诉你
+          // "这其实是个开关，而且现在是开着的"。这两条属性就是补这个的。
+          role="switch"
+          aria-checked={settings.rpeEnabled}
+          className="card press flex w-full items-center gap-3 p-4 text-left"
         >
           <div className="flex-1">
-            <div className="font-medium text-ink">记录 RPE</div>
+            <div className="text-lg font-semibold text-ink">记录 RPE</div>
             <div className="mt-0.5 text-sm text-muted">
               自感用力程度 1-10。关掉的话，记一组时少填一个框
             </div>
           </div>
+          {/* 【为什么把"开/关"两个字换成一个滑动开关】
+              写"开"的时候，你看到它并不能确定是"现在是开"还是"点了会开"——
+              一个字的状态标签天生就有这个歧义，得点一下才知道。
+              轨道 + 滑块是全世界都认的开关样子，位置本身就是答案，没有歧义。
+              圆钮始终是白色：无论底色是灰轨道还是橙色轨道、
+              无论是日间还是夜间，白色都看得见。 */}
           <span
-            className={`shrink-0 text-sm font-semibold ${
-              settings.rpeEnabled ? 'text-brand' : 'text-muted'
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
+              settings.rpeEnabled ? 'bg-brand' : 'bg-line-2'
             }`}
           >
-            {settings.rpeEnabled ? '开' : '关'}
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-snap ${
+                settings.rpeEnabled ? 'translate-x-[22px]' : 'translate-x-0.5'
+              }`}
+            />
           </span>
         </button>
 
@@ -448,25 +463,25 @@ export function SettingsScreen() {
           onClick={() => setSub('body')}
         />
         {/* ---------- 备份 ---------- */}
-        <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="font-medium text-ink">备份</div>
+        <div className="card p-4">
+          <div className="text-lg font-semibold text-ink">备份</div>
           <p className="mt-0.5 text-sm text-muted">
             数据只存在这台手机里，清缓存或换手机都会丢。
             建议每周导一次，顺手发到微信收藏。
           </p>
 
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3.5 flex gap-2">
             <button
               type="button"
               onClick={handleExport}
-              className="min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand"
+              className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)]"
             >
               导出备份
             </button>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="min-h-11 flex-1 rounded-lg border border-line text-ink-2"
+              className="press min-h-11 flex-1 rounded-lg border border-line-2 text-ink-2"
             >
               导入恢复
             </button>
@@ -516,13 +531,28 @@ function SettingRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface p-4 text-left"
+      className="card press flex w-full items-center gap-3 p-4 text-left"
     >
       <div className="flex-1">
-        <div className="font-medium text-ink">{label}</div>
+        <div className="text-lg font-semibold text-ink">{label}</div>
         <div className="mt-0.5 text-sm text-muted">{hint}</div>
       </div>
-      <span className="shrink-0 text-lg text-muted">›</span>
+      {/* 箭头用 SVG 画，不用「›」这个字符。
+          字符的粗细和大小是跟着字体走的 —— 不同手机上的系统字体不一样，
+          那个箭头就会一会儿粗一会儿细，而且它比旁边的字细太多，
+          看着像没画完。SVG 的线宽由 strokeWidth 定死，到哪儿都一样。 */}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-muted"
+      >
+        <path d="M9 6l6 6-6 6" />
+      </svg>
     </button>
   )
 }
@@ -564,7 +594,7 @@ function NotifyLine({
         <button
           type="button"
           onClick={onAction}
-          className="min-h-11 shrink-0 rounded-lg border border-line px-3 text-sm text-ink-2"
+          className="press min-h-11 shrink-0 rounded-lg border border-line-2 px-3 text-sm text-ink-2"
         >
           {actionLabel}
         </button>
