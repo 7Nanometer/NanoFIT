@@ -106,12 +106,17 @@ export function chartColors() {
   const read = (name: string, fallback: string): string =>
     style.getPropertyValue(name).trim() || fallback
 
+  // 后面那些备胎值**正常情况下永远用不到** —— index.css 里一定定义了这些变量。
+  // 它们只在"样式还没加载完就被问到"这种极端情况下兜底。
+  // 【但备胎也得跟着主胎一起换】不换的话，真出问题时图表会画成上一次改版
+  // 的颜色（灰紫、深灰），而不是回报一个明显的错误 —— 那种"看起来像对了"
+  // 的故障最难查。所以下面这几个值要和 index.css 的夜间那套保持一致。
   return {
     brand: read('--color-brand', '#ff4d2e'),
-    muted: read('--color-muted', '#898781'),
-    line: read('--color-line', '#2e2e2e'),
-    surface: read('--color-surface', '#1e1e1e'),
-    ink: read('--color-ink', '#ffffff'),
+    muted: read('--color-muted', '#74746e'),
+    line: read('--color-line', '#23232a'),
+    surface: read('--color-surface', '#17171b'),
+    ink: read('--color-ink', '#f7f7f5'),
     chart2: read('--color-chart-2', '#4da3ff'),
     chart3: read('--color-chart-3', '#5fd38a'),
   }

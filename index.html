@@ -28,8 +28,11 @@
     />
 
     <!-- theme-color：手机上地址栏/状态栏会跟着变成这个颜色。
-         日间模式时下面的小脚本会把它改成白色。 -->
-    <meta name="theme-color" content="#121212" />
+         日间模式时下面的小脚本会把它改成白色。
+         ★ 这个值必须和 index.css 里 --color-bg 的夜间值保持一致 ——
+           它只在 JS 跑起来之前的那一瞬间有用（跑起来之后由
+           src/lib/theme.ts 接管），对不上就会闪一下颜色。 -->
+    <meta name="theme-color" content="#0a0a0c" />
 
     <meta
       name="description"
