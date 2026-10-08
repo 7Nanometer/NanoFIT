@@ -157,7 +157,7 @@ export function CardioForm({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-11 min-w-11 text-muted"
+            className="press inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted"
           >
             ✕
           </button>
@@ -351,7 +351,7 @@ export function CardioForm({
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand disabled:opacity-40"
+            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
           >
             保存
           </button>

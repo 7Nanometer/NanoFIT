@@ -403,7 +403,7 @@ export function SettingsScreen() {
                 type="button"
                 onClick={saveDefaultWeight}
                 disabled={!weightValid}
-                className="press min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand disabled:opacity-40"
+                className="press min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
               >
                 保存
               </button>
