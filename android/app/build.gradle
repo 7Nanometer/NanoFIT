@@ -14,8 +14,8 @@ android {
         //   versionName = 日期 · 7 位存档号（git 提交的短哈希）
         //     给人看的。App 的设置页最下面会显示它。
         //   ★ 存档号要先提交代码、拿到哈希，再写到这里提交。
-        versionCode 20260930
-        versionName "2026.09.30 · 9d113ab"
+        versionCode 20261008
+        versionName "2026.10.08 · 1e50dae"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
