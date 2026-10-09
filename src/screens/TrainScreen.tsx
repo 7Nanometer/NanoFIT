@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import type {
   BodyMetric,
   Exercise,
@@ -53,8 +54,8 @@ import { ElapsedBadge } from '../components/ElapsedBadge'
 import { MetPicker } from '../components/MetPicker'
 import { Readout, ReadoutCell } from '../components/Readout'
 import { ExercisePicker } from '../components/ExercisePicker'
+import { NumberField } from '../components/NumberField'
 import { RestTimer } from '../components/RestTimer'
-import { SetRow } from '../components/SetRow'
 import { TemplatePicker } from '../components/TemplatePicker'
 
 // ============================================================
@@ -723,16 +724,29 @@ export function TrainScreen() {
 
   return (
     <div>
-      {/* ---------- 顶部仪表盘 ---------- */}
-      <header className="mb-5">
-        <div className="flex items-start justify-between gap-3">
+      {/* ---------- 顶部抬头 ----------
+          【这一轮把标题换了】
+          以前这一屏最大的一行是日期（28px），第二大的才是"已练多久"。
+          可这是练到一半掏出来瞄一眼的屏幕 —— 你要看的是"练了多久、
+          举了多少"，不是今天是几号。日期占着最大的字号，
+          等于把版面让给了最不需要的东西。
+
+          现在反过来：**标题是这次训练的名字**（套模板时会有，比如"推日"），
+          没有名字时才退回日期；日期和状态一起压成标题下面那行小字。
+          字号从 28px 收到 21px，省下的分量全部让给下面那条读数带。
+
+          【为什么状态灯跟着挪到小字行】
+          它是"通电了"那颗指示灯，属于"状态"不属于"标题"，
+          和日期这一类信息在一起才说得通。 */}
+      <header className="mb-4">
+        <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
-            {/* ---------- 状态灯 ----------
-                没开始训练时是一颗不亮的灰点；开始之后变成青色的、
-                一呼一吸地亮着 —— 就是器械面板上"通电了"的那颗灯。
-                它顺手解决了一个老问题：以前这一屏看不出"到底开始记了没有"，
-                而"已练多久"那个数却已经在跑了，看着像出错了。 */}
-            <div className="flex items-center gap-1.5">
+            <h1 className="truncate text-xl font-bold text-ink">
+              {/* 没有训练名字时，标题就是日期 —— 总得有个东西当标题 */}
+              {session?.name ?? formatDateCN(session?.date ?? today)}
+            </h1>
+
+            <div className="mt-1 flex items-center gap-1.5">
               <span
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                   session !== null
@@ -743,20 +757,21 @@ export function TrainScreen() {
               <span className="t-label">
                 {session !== null ? '训练中' : '未开始'}
               </span>
+
+              {/* 有训练名字时，日期退到这一行；没名字时标题已经是日期了，
+                  这里就不再重复写一遍。
+                  t-num 让日期里的数字等宽：跨天时整行不会左右挪一下。 */}
+              {session?.name !== undefined && (
+                <>
+                  <span className="t-label" aria-hidden="true">
+                    ·
+                  </span>
+                  <span className="t-num t-label">
+                    {formatDateCN(session.date)}
+                  </span>
+                </>
+              )}
             </div>
-
-            {/* t-num 让日期里的数字等宽：跨天时整行不会左右挪一下 */}
-            <h1 className="t-num mt-1.5 text-2xl font-bold">
-              {formatDateCN(session?.date ?? today)}
-            </h1>
-
-            {/* 套用模板时这次训练会带个名字（比如"推日"）。
-                以前它藏在"历史"页里，训练中途看不到 —— 现在摆出来。 */}
-            {session?.name !== undefined && (
-              <p className="mt-0.5 truncate text-sm text-ink-2">
-                {session.name}
-              </p>
-            )}
           </div>
 
           {session !== null && (
@@ -794,18 +809,19 @@ export function TrainScreen() {
                   value={String(strengthEntries.length)}
                 />
               )}
-              {/* 单位 kg 并到标签里去了，不占数字那一行的宽度 ——
-                  375px 的屏幕上四格并排，每一格只有 70 来个像素可用。
-                  数字也取整：读数条是"扫一眼"的地方，
+              {/* 数字取整：读数条是"扫一眼"的地方，
                   "2,929.5"里那个 .5 在这儿没人会去用，却要多占一格宽度。
                   （历史页里还是带小数的，那里是"核对"的地方，精度该留着。） */}
-              {/* 标签写"容量 kg"而不是"总容量 kg" ——
+              {/* 标签写"容量"而不是"总容量" ——
                   少一个字，是为了在最窄的手机上不被裁掉。
                   "容量"本身也就是这个指标的名字（见 CLAUDE.md 的公式），
-                  并没有因为少了个"总"而变得看不懂。 */}
+                  并没有因为少了个"总"而变得看不懂。
+                  单位 kg 这一轮从标签里挪到了数字后面（用 .t-unit 压小压淡）——
+                  这是全站统一的写法：数字是主、单位是附注。 */}
               {strengthEntries.length > 0 && (
                 <ReadoutCell
-                  label="容量 kg"
+                  label="容量"
+                  unit="kg"
                   value={Math.round(
                     sessionVolume(strengthEntries),
                   ).toLocaleString()}
@@ -1094,10 +1110,37 @@ function ExerciseCard({
     setRpeText('')
   }
 
-  // 目标组数练够了没有。练够了进度条会从橙红变成青色 ——
-  // 这套配色的分工是"橙=正在做、青=已完成"（见 index.css 顶部说明），
-  // 所以"完成"不能再用橙色表示，否则两个含义会打架。
+  // 目标组数练够了没有。练够了进度条会从浅青变成实青，
+  // 右边那个"3/4"也跟着变色 —— 这套配色的分工是
+  // "橙=要动手，青=已经记下来的数"（见 index.css 顶部说明）。
   const plannedDone = planned !== undefined && sets.length >= planned.targetSets
+
+  // 组记录那张小表的列宽。表头行、数据行、输入行三处共用这一条，
+  // 所以输入框正好落在它要填的那一列底下，三行的数字也全都在同一条竖线上。
+  //
+  // 【每一列是干什么的】
+  //   1.25rem  组号
+  //   3.75rem  重量（右对齐）
+  //   3rem     次数（右对齐）
+  //   3rem     RPE
+  //   1fr      弹性空隙 —— 把所有富余的宽度都吃掉
+  //   2.75rem  删除按钮（44px，手指点得准的最小尺寸）
+  //
+  // 【为什么重量和次数要右对齐】
+  // 右对齐之后，一列数字的**右边缘**落在同一条竖线上。
+  // "80 / 80 / 82.5"这样斜着扫一眼就能比出大小 —— 左对齐的话
+  // 每个数字从同一个地方开始，长短不一，反而比不出来。
+  // 这是所有账本、所有表格都把数字右对齐的唯一原因。
+  //
+  // 【为什么这一轮把宽度从 1fr 1fr 改成了写死的尺寸】
+  // 上一版重量和次数各占 1fr，结果在 375px 的手机上每列有 96px 宽，
+  // 而"80"只占 30px —— 数字全都右对齐飘在格子的最右边，
+  // 组号"1"和重量"80"之间隔着大半个屏幕，读一行得横着跳两次。
+  // 写成固定宽度之后数字全挤到左边成一组，中间那段富余宽度
+  // 统一交给后面那个 1fr 吃掉：数字在左、删除按钮在右，中间是空气。
+  // 这也是所有表格的常规写法 —— 列宽由内容决定，不由容器均分。
+  const SET_GRID =
+    'grid-cols-[1.25rem_3.75rem_3rem_3rem_1fr_2.75rem] gap-x-1.5'
 
   return (
     <div
@@ -1105,24 +1148,52 @@ function ExerciseCard({
       // 【为什么要封顶 Math.min(…, 180)】
       // 动作多的那天可能有十来个动作。不封顶的话最后一个要等 350 毫秒
       // 才出现 —— 那已经不叫"入场动画"，那叫"卡了"。
-      className="card animate-rise mb-3 p-3.5"
+      //
+      // 【这一轮从 card 换成了 ledger】
+      // 卡片的圆角和阴影让它看着像一块"浮起来的小部件"；
+      // 账本没有阴影、圆角更小，里面用细线分行 —— 它是"印在页面上的一页"。
+      // 一屏六七个动作时，这个差别就是"一堆卡片"和"一份训练记录"的差别。
+      className="ledger animate-rise mb-2.5"
       style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
     >
-      {/* ---------- 卡片头：动作名 + 移除 ---------- */}
-      <div className="flex items-start gap-3">
+      {/* ---------- 卡头：序号 + 动作名 + 移除 ---------- */}
+      <div className="flex items-start gap-2.5 px-3.5 pb-2.5 pt-3">
+        {/* 序号（01、02…）：账本左边那一列行号。
+            它让"我现在在第几个动作"变成一眼可读的事，
+            也让这一页看起来像一份编了号的清单，而不是一摞卡片。 */}
+        <span className="t-index mt-1 shrink-0">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+
         <div className="min-w-0 flex-1">
-          {/* 动作名用 text-lg（17px）半粗 —— 它是这张卡的标题，
+          {/* 动作名用 text-lg（17px）半粗 —— 它是这一块的标题，
               必须比卡里所有别的东西都重，否则整张卡是一团平的 */}
           <div className="truncate text-lg font-semibold text-ink">{name}</div>
-          {(equipment !== '' || planned !== undefined) && (
-            <div className="mt-0.5 text-xs text-muted">
-              {equipment}
-              {equipment !== '' && planned !== undefined && ' · '}
-              {planned !== undefined &&
-                `目标 ${planned.targetSets} 组 × ${planned.targetReps} 次`}
-            </div>
-          )}
+
+          <div className="mt-0.5 flex items-baseline gap-2">
+            {(equipment !== '' || planned !== undefined) && (
+              <span className="min-w-0 truncate text-xs text-muted">
+                {equipment}
+                {equipment !== '' && planned !== undefined && ' · '}
+                {planned !== undefined &&
+                  `目标 ${planned.targetSets} 组 × ${planned.targetReps} 次`}
+              </span>
+            )}
+            {/* "3/4"挪到这一行的右端。
+                以前它是挤在设备名末尾的一个小数，和"杠铃"这种字一样重，
+                根本没人看得见 —— 现在单独靠右，练够了还会变成青色。 */}
+            {planned !== undefined && (
+              <span
+                className={`t-num ml-auto shrink-0 text-xs font-semibold ${
+                  plannedDone ? 'text-cyan' : 'text-ink-2'
+                }`}
+              >
+                {sets.length}/{planned.targetSets}
+              </span>
+            )}
+          </div>
         </div>
+
         <button
           type="button"
           onClick={onRemoveExercise}
@@ -1134,40 +1205,36 @@ function ExerciseCard({
         </button>
       </div>
 
-      {/* ---------- 计划进度条 ----------
-          以前"3/4"是挤在设备名那一行末尾的一个小数，根本没人看得见。
-          现在把它单独拎成一根进度条 —— 器械上的"当前进度"就是这么显示的，
-          比数字更直接：一眼看出还差几组，不用算。 */}
-      {planned !== undefined && (
-        <div className="mt-2.5 flex items-center gap-2.5">
-          <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
-            <div
-              // transition-[width]：进度是"长"过去的，不是"跳"过去的。
-              // 300ms 配合 ease-mech（起步快、收尾稳），看着结实不飘。
-              className={`h-full rounded-full transition-[width] duration-300 ease-mech ${
-                plannedDone ? 'bg-cyan' : 'bg-brand'
-              }`}
-              // 练超了也不让条子冲出边界（Math.min 压在 100%）
-              style={{
-                width: `${Math.min(100, (sets.length / planned.targetSets) * 100)}%`,
-              }}
-            />
-          </div>
-          <span
-            className={`t-num shrink-0 text-xs font-semibold ${
-              plannedDone ? 'text-cyan' : 'text-ink-2'
+      {/* ---------- 卡头下面那条线，有目标时它就是进度条 ----------
+          以前进度是单独一根圆角条，占掉一整行（约 20px）。
+          现在它**直接变成卡头下面那条分隔线** —— 线本来就要画，
+          顺便把进度一起说了，省掉一整行，而且整宽铺满的线
+          比一小截圆角条更像"刻度"。
+
+          【为什么没目标时是 1px、有目标时是 2px】
+          没目标时它只是一条普通分隔线，要和全站别的细线一样细；
+          有目标时它要"装得下"进度，2px 才看得清那一段青色。 */}
+      {planned !== undefined ? (
+        <div className="h-0.5 bg-line">
+          <div
+            // transition-[width]：进度是"长"过去的，不是"跳"过去的。
+            // 300ms 配合 ease-mech（起步快、收尾稳），看着结实不飘。
+            // 练超了也不让条子冲出边界（Math.min 压在 100%）。
+            className={`h-full transition-[width] duration-300 ease-mech ${
+              plannedDone ? 'bg-cyan' : 'bg-cyan/50'
             }`}
-          >
-            {sets.length}/{planned.targetSets}
-          </span>
+            style={{
+              width: `${Math.min(100, (sets.length / planned.targetSets) * 100)}%`,
+            }}
+          />
         </div>
+      ) : (
+        <div className="h-px bg-line" />
       )}
 
       {/* ---------- 下半截：有氧和力量在这里分道扬镳 ---------- */}
-      {/* 组记录和输入行之间空 12px，和卡片头之间也是 12px ——
-          这样"上面是标题、中间是记录、下面是输入"三段的节奏是一致的 */}
       {isCardio ? (
-        <div className="mt-3">
+        <>
           {/* 有氧每条就是一句话，没有组号也没有 RPE */}
           {sets.map((s) => (
             <div
@@ -1175,7 +1242,7 @@ function ExerciseCard({
               // animate-rise：这一条是刚"长"出来的，不是突然出现的。
               // 只对新加的那一条生效 —— 因为 React 认得 key，
               // 老的那些元素没被重建，动画就不会重放。
-              className="well animate-rise mb-1.5 flex min-h-11 items-center gap-2 px-3 text-sm"
+              className="ledger-row animate-rise text-sm"
             >
               <span className="t-num flex-1 text-ink">{describeCardio(s)}</span>
               <RemoveSetButton onClick={() => onRemoveSet(s.id)} />
@@ -1183,63 +1250,163 @@ function ExerciseCard({
           ))}
 
           {/* 再记一次：直接带着这个动作打开录入面板，省掉"重新选一遍" */}
-          <button
-            type="button"
-            onClick={onAddMoreCardio}
-            className="press mt-2.5 min-h-11 w-full rounded-lg border border-dashed border-line text-sm text-ink-2"
+          <div
+            className={`px-3.5 py-3 ${sets.length > 0 ? 'border-t border-line' : ''}`}
           >
-            + 再记一次
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onAddMoreCardio}
+              className="press min-h-11 w-full rounded-lg border border-dashed border-line text-sm text-ink-2"
+            >
+              + 再记一次
+            </button>
+          </div>
+        </>
       ) : (
-        <div className="mt-3">
+        <>
+          {/* ---------- 表头 ----------
+              只在"已经记了至少一组"时出现 —— 一组都没记时，
+              顶着一张空表格反而像坏了。
+
+              这一行是整个账本观感的关键：它把下面那几行数字变成了一张**表**。
+              三件事各说一次就够，不用每行都写一遍：
+              "KG"说了单位，"次"说了那列是什么，"RPE"同理。
+              因为单位不用写在每一行上，每一行才能那么窄、那么干净。 */}
+          {sets.length > 0 && (
+            <div
+              className={`t-label grid ${SET_GRID} items-center border-b border-line px-3 py-1.5`}
+            >
+              <span />
+              <span className="text-right">KG</span>
+              <span className="text-right">次</span>
+              <span className="text-right">RPE</span>
+              <span />
+              <span />
+            </div>
+          )}
+
           {/* ---------- 已经记好的组 ----------
-              每一行是"组号 / 重量×次数 / RPE / 删"，四样各占一个位置：
-              组号和 RPE 宽度固定，重量那一格吃掉剩下的空间。
-              结果是所有行的数字都落在同一条竖线上 —— 斜着一扫就能看出
-              哪一组掉了重量，不用一行一行读。 */}
+              每一行是"组号 / 重量 / 次数 / RPE / 删"，五样各占一列。
+              所有列宽都固定，所以行与行之间的数字是严格对齐的 ——
+              斜着一扫就能看出哪一组掉了重量，不用一行行读。 */}
           {sets.map((s, index) => (
             <div
               key={s.id}
-              className="well animate-rise mb-1.5 flex min-h-11 items-center gap-2.5 px-3 text-sm"
+              // min-h-11：行高至少 44px。既满足手指点得准的最小尺寸，
+              // 也让每行一样高 —— 一样高，细线才是均匀的。
+              className={`ledger-row animate-rise grid ${SET_GRID} min-h-11 px-3`}
             >
-              <span className="t-num w-4 shrink-0 text-center text-xs font-medium text-muted">
-                {index + 1}
-              </span>
-              <span className="t-num flex-1 font-medium text-ink">
+              <span className="t-index">{index + 1}</span>
+              {/* 【数字为什么是 21px，比正文大了整整两档】
+                  这一屏的正事就是"我这组举了多少"。这几个数字是整页的**内容**，
+                  不是说明文字。之前它们和正文一样大（15px），
+                  于是整张表看着像一页淡淡的说明；提到 21px 之后，
+                  一屏扫下去先看到的就是这些数，其余全部退到后面去。
+                  这也是表格能"斜着扫一眼"的前提 —— 数字得先够大。 */}
+              <span className="t-num truncate text-right text-xl font-semibold text-ink">
                 {s.weightKg}
-                {/* 单位单独用小字浅色：它每行都一样，不该和数字抢分量 */}
-                <span className="ml-0.5 font-normal text-muted">kg</span>
-                <span className="mx-1 text-muted">×</span>
+              </span>
+              <span className="t-num truncate text-right text-xl font-semibold text-ink">
                 {s.reps}
               </span>
-              {s.rpe !== undefined && (
-                // RPE 做成小胶囊：它一眼就能被认出是"附加信息"，
-                // 不会和重量次数混在一起读成一句
-                <span className="t-num shrink-0 rounded bg-surface px-1.5 py-0.5 text-xs text-ink-2">
-                  RPE {s.rpe}
-                </span>
-              )}
+              {/* RPE 用比主数字小一号、淡一档的颜色 ——
+                  它是"附加信息"，不该和重量次数抢着被读到。
+                  没填就留空：那一格空着本身就是"这一组没记 RPE"，
+                  不需要写个"—"占位置。 */}
+              <span className="t-num text-right text-sm text-ink-2">
+                {s.rpe ?? ''}
+              </span>
+              {/* 弹性空隙列。它不显示任何东西，
+                  作用是把右边的删除按钮顶到行的最右边去。 */}
+              <span />
               <RemoveSetButton onClick={() => onRemoveSet(s.id)} />
             </div>
           ))}
 
-          {/* ---------- 输入行 ---------- */}
-          <div className="mt-3">
-            <SetRow
-              weightText={weightText}
-              repsText={repsText}
-              rpeText={rpeText}
-              showRpe={showRpe}
-              onWeightChange={setWeightText}
-              onRepsChange={setRepsText}
-              onRpeChange={setRpeText}
-              onConfirm={handleConfirm}
-              canConfirm={canConfirm}
-            />
+          {/* ---------- 输入行 ----------
+              用的是和数据行同一个列宽，所以输入框正好落在
+              它要填的那一列底下 —— 上面"80"下面就是填重量，
+              不用看标签也知道该往哪格填。 */}
+          <div
+            // 【为什么这条上边线要按条件加】
+            // 有记录时，它把"已经记下来的"和"下面这张待填的表"分开，
+            // 这条线是有意义的。一组都没记时，它上面就是卡头那条线，
+            // 两条线挨在一起会看着像画重了。
+            className={`grid ${SET_GRID} items-end px-3 pb-3 pt-2.5 ${
+              sets.length > 0 ? 'border-t border-line' : ''
+            }`}
+          >
+            {/* 第一格空着 —— 但**必须留着**。
+               不占着这一格的话，后面三个输入框会整体左移一格，
+               正好错开它们要填的那一列，上面"80"下面填到"次"里去。 */}
+            <span aria-hidden="true" />
+
+            <Field label="kg">
+              <NumberField
+                value={weightText}
+                onChange={setWeightText}
+                placeholder="80"
+                // px-1 而不是 NumberField 自带的 px-2：
+                // 这几格的宽度是照着"数字要多宽"定死的（约 60px），
+                // 再留 8 像素的内边距，"82.5"就会顶到边。
+                className="px-1"
+              />
+            </Field>
+
+            <Field label="次">
+              <NumberField
+                value={repsText}
+                onChange={setRepsText}
+                placeholder="8"
+                className="px-1"
+              />
+            </Field>
+
+            {/* RPE 关掉时这一格留空，但**列还留着** ——
+                这样"✓"永远在同一个位置，肌肉记忆不会被打乱 */}
+            {showRpe ? (
+              <Field label="RPE">
+                <NumberField
+                  value={rpeText}
+                  onChange={setRpeText}
+                  placeholder="—"
+                  className="px-1"
+                />
+              </Field>
+            ) : (
+              <span />
+            )}
+
+            {/* 和数据行同一个弹性空隙，这样"✓"才会落在删除按钮那一列底下 */}
+            <span />
+
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={!canConfirm}
+              // min-h-11 min-w-12 ≈ 44×48 像素：手指点得准的最小尺寸，
+              // 宽度比最低要求宽一点点，因为它是最常按的那一颗
+              //
+              // 【没填好时：灰底、灰字、没有光晕】
+              // 这三样一起去掉，按钮就"沉"下去了 —— 一眼看出现在按不动，
+              // 而不是按下去之后才发现没反应。
+              className="press min-h-11 w-full rounded-lg bg-brand text-xl font-bold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+            >
+              ✓
+            </button>
           </div>
-        </div>
+        </>
       )}
+    </div>
+  )
+}
+
+// 输入框上面那行小标签（kg / 次 / RPE）。抽出来是为了不用把同样的结构写 3 遍。
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      {label !== '' && <div className="t-label mb-1 text-center">{label}</div>}
+      {children}
     </div>
   )
 }
@@ -1249,7 +1416,7 @@ function ExerciseCard({
 // 【为什么值得单独抽一个组件】
 // 它要满足两个互相打架的要求：看得见的小、点得中的大。
 // 做法是让按钮本身 44×44（项目铁律里手指点得准的最小尺寸），
-// 再用 -mr-2 把它往外推一点，视觉上仍然贴着卡片右边。
+// 但里面那个"×"字号不大、颜色很淡 —— 于是它看着不起眼，点着很准。
 // 抽出来是因为卡片里有两处要用（有氧那一种、力量这一种），
 // 两边各写一遍迟早会写岔。
 function RemoveSetButton({ onClick }: { onClick: () => void }) {
@@ -1260,7 +1427,11 @@ function RemoveSetButton({ onClick }: { onClick: () => void }) {
       // 按钮里只有一个"×"，读屏软件念出来会是"乘号"，等于没念。
       // aria-label 是专门给它补一句人话用的（光标悬停时的提示也用它）。
       aria-label="删掉这一组"
-      className="press -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-base leading-none text-muted"
+      // 【这一轮为什么把 -mr-2 去掉了】
+      // 上一版它在卡片里，要往外推一点才贴着右边。现在它在表格的
+      // 最后一列里，那一列本身就是 44px 宽、右边就是行的内边距 ——
+      // 再往外推就顶出表格的边了。
+      className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg leading-none text-muted"
     >
       ×
     </button>

@@ -25,10 +25,20 @@ type ReadoutProps = {
   children: ReactNode
 }
 
-// 外壳。divide-x = 在每一格之间画一条竖分隔线（第一格左边不画）。
+// 外壳。
+//
+// 【这一轮为什么把 card 换成了两条横线】
+// 以前它是一张卡片：圆角、投影、四个格子。问题是它和下面那些动作卡片
+// 长得是同一类东西 —— 眼睛会以为"这也是一张卡"，于是它读起来
+// 就只是"第一张卡"，而不是"整页的抬头"。
+//
+// 换成上下两条细线（border-y）之后，它变成了一条**横贯页面的读数带**：
+// 上面那条线把它和页头分开，下面那条线把它和内容分开，
+// 中间四格用竖线分栏。这是印刷表格的做法，也是账本的做法 ——
+// 它不再"浮"在页面上，而是"印"在页面上，自然就成了抬头的分量。
 export function Readout({ children }: ReadoutProps) {
   return (
-    <div className="card flex items-stretch divide-x divide-line overflow-hidden">
+    <div className="flex items-stretch divide-x divide-line border-y border-line">
       {children}
     </div>
   )
@@ -47,20 +57,31 @@ export function ReadoutCell({ label, value, unit, accent }: CellProps) {
     // 最窄的手机（320px，比如 iPhone SE 一代）上四格并排，每格只有 48 像素
     // 能放字。默认的 px-3 两边一共吃掉 24 像素，标签就会被裁成"总容…"。
     // 370px 以上的机器（也就是现在绝大多数手机）空间够了，再回到宽松的 12 像素。
-    <div className="min-w-0 flex-1 px-2.5 py-2.5 min-[370px]:px-3">
+    <div className="min-w-0 flex-1 py-3 pl-3 pr-2">
       <div className="t-label truncate">{label}</div>
       {/* whitespace-nowrap：万一数字很长（比如"12,345"），
           宁可让它把格子撑开一点，也不要在中间断行 ——
           数字断成两行就完全读不出来了。 */}
       <div
-        className={`t-num mt-0.5 whitespace-nowrap text-lg font-semibold ${
+        // 【数字从 17px 提到 21px】
+        // 它是全屏最该被一眼抓住的东西（正在练多久、已经举了多少公斤），
+        // 却和下面卡片里的正文差不多大。提上来之后，
+        // 扫一眼手机就够，不用凑近看。
+        //
+        // 【为什么 320px 的机器上退回 17px】
+        // 四格并排，320px 的屏幕每格只有 72 像素。21px 的"2,930"
+        // 本身就占 55 像素，再加单位" kg"就顶出去了 ——
+        // 而这一条是"不许横向溢出"的（越界的元素会把整页顶歪）。
+        // 370px 以上（也就是现在绝大多数手机）空间够，就用回大号。
+        className={`t-num mt-1 whitespace-nowrap text-lg font-semibold min-[370px]:text-xl ${
           accent === true ? 'text-brand' : 'text-ink'
         }`}
       >
         {value}
-        {unit !== undefined && (
-          <span className="ml-1 text-xs font-normal text-muted">{unit}</span>
-        )}
+        {/* 单位用 .t-unit（和数字同一条基线、小一号、更淡）——
+            单位和数字一样大时，眼睛会把"2,930 kg"当成一整个字符串读，
+            数字就不突出了。 */}
+        {unit !== undefined && <span className="t-unit ml-1">{unit}</span>}
       </div>
     </div>
   )

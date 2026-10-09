@@ -22,6 +22,12 @@ import { setKeepAwake } from '../lib/wakelock'
 // 从后台切回来的瞬间，它会立刻补上冻结期间那一段。
 // ============================================================
 
+// 表盘的画布尺寸。svg 的 viewBox 和外面那个方框都用它，两边必须一致。
+// 【为什么从 88 加到了 96】因为外面要多出一圈刻度（见下面的 TICK_*）——
+// 刻度得画在圆环**之外**，画布里不留出这几像素就没地方放了。
+const RING_SIZE = 96
+// 表盘的圆心。画圆、画刻度、转刻度都以它为基准。
+const RING_CENTER = RING_SIZE / 2
 // 圆环的半径（和下面 svg 里那句 r="38" 是同一个数）。
 // 抽成常量是因为它要用在两处：画圆的那两行，和算周长这一行。
 // 两处各写一个 38，改了一处忘了另一处，环就会画歪。
@@ -33,6 +39,28 @@ const RING_RADIUS = 38
 // strokeDashoffset 是"把这一串段整体推多远"。
 // 两者配合，推出去多少就露出多少 —— 这就是把圆按比例涂满的标准做法。
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
+
+// ---------- 外圈那 12 道刻度 ----------
+//
+// 【为什么值得单独画一圈刻度】
+// 没有它，这个环就是一个"进度圆圈"—— 界面上到处都是的那种通用零件。
+// 加上一圈刻度之后，它变成了一块**表盘**：有量程、有分格，
+// 一眼就知道"还剩多少"是在一个固定的范围里说的。
+// 这是整个 App 里最"器械"的一处细节，也是这一屏最该被记住的地方。
+//
+// 【为什么是 12 道】
+// 表盘是按钟点读的 —— 12 道刻度把圆分成 12 格，每格 30°，
+// 眼睛不用数就知道"过半了没有"。
+// 换成 60 道（一秒一格）在 96 像素的表盘上会糊成一片灰色。
+const TICK_COUNT = 12
+// 刻度画在哪一段半径上：从 43 到 47。
+// 圆环本身占 35～41（半径 38、线宽 6），所以刻度正好在环外面、不打架。
+const TICK_INNER = 43
+const TICK_OUTER = 47
+
+// 12 道刻度各自要转多少度。写成模块级的常量而不是在组件里现算 ——
+// 这个组件每 0.25 秒重画一次（倒计时在走），常量放在外面就不用反复重算。
+const TICKS = Array.from({ length: TICK_COUNT }, (_, i) => (i * 360) / TICK_COUNT)
 
 type Props = {
   endsAt: number // 休息结束的时间点（毫秒时间戳）
@@ -160,7 +188,7 @@ export function RestTimer({
       <button
         type="button"
         onClick={onClose}
-        className="press animate-beat mb-3 w-full rounded-xl bg-brand p-4 text-center text-on-brand shadow-[var(--elev-brand)]"
+        className="press animate-beat mb-2.5 w-full rounded-md bg-brand p-4 text-center text-on-brand shadow-[var(--elev-brand)]"
       >
         <div className="text-lg font-bold">休息结束</div>
         <div className="mt-1 text-sm opacity-80">点一下继续</div>
@@ -169,47 +197,75 @@ export function RestTimer({
   }
 
   // ---------- 正在倒计时的样子 ----------
-  // 造型是一块仪表：左边一个圆环表盘，右边是说明文字，最右边"跳过"。
+  // 造型是一块**表盘 + 读数 + 操作**的面板，分三层：
+  //   上半：左边表盘（含刻度圈）、中间"休息中"、右边"跳过"
+  //   下面：一道细线，线下面是"切走会不会提醒你"那行状态
   // 以前它只是两行小字加一个数字，是全屏最不打眼的位置 ——
   // 可它偏偏是你组间唯一盯着看的东西。
   return (
     // 【为什么要给这圈边框单独上色】
-    // 它和下面的动作卡片用的是同一个 .card，长得一模一样 ——
-    // 可它俩根本不是一类东西：动作卡是"已经记下的内容"（静的），
+    // 它和上面那些动作块长得一模一样 ——
+    // 可它俩根本不是一类东西：动作块是"已经记下的内容"（静的），
     // 这一块是"正在走的状态"（活的）。
     // 用青色描边把它标出来，眼睛一眼就知道该看哪儿。
     // 最后 10 秒跟着整块变成橙红 —— 边框和数字一起变色，
     // 不会出现"数字变橙了、边框还是青的"这种半吊子状态。
+    //
+    // 【这一轮从 .card 换成了 .ledger】和训练页其余部分保持一致：
+    // 没有阴影、圆角更小、里面的分隔一律用细线。
     <div
-      className={`card animate-rise mb-3 p-3.5 transition-colors duration-300 ${
+      className={`ledger animate-rise mb-2.5 transition-colors duration-300 ${
         urgent ? 'border-brand/45' : 'border-cyan/30'
       }`}
     >
-      <div className="flex items-center gap-3.5">
-        {/* ---------- 圆环表盘 ---------- */}
-        <div className="relative grid h-[88px] w-[88px] shrink-0 place-items-center">
+      <div className="flex items-center gap-3.5 px-3.5 py-3">
+        {/* ---------- 表盘 ---------- */}
+        <div
+          className="relative grid shrink-0 place-items-center"
+          style={{ width: RING_SIZE, height: RING_SIZE }}
+        >
           {/* -rotate-90：让环从"12 点钟方向"开始填，而不是从 3 点方向。
               这是所有仪表和秒表的共同约定，不这么转看着就不对劲。
-              注意它只转这个 svg，不转外面的数字 —— 数字是它的兄弟节点。 */}
+              注意它只转这个 svg，不转外面的数字 —— 数字是它的兄弟节点。
+              （外面那 12 道刻度是均匀分布的，转不转都落在同一个地方。） */}
           <svg
-            viewBox="0 0 88 88"
+            viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
             className="absolute inset-0 -rotate-90"
             aria-hidden="true"
           >
+            {/* ---------- 外圈刻度 ----------
+                12 道，每道 30°，画在圆环外面那 4 像素里。
+                transform 的 rotate 是 SVG 里的转法：绕圆心 (48,48) 转。
+                每道刻度先按"12 点方向"画（x 不变、y 往上伸），
+                再用 rotate 转到各自的角度上 —— 这样写比手算三角函数清楚得多。 */}
+            {TICKS.map((angle) => (
+              <line
+                key={angle}
+                x1={RING_CENTER}
+                y1={RING_CENTER - TICK_INNER}
+                x2={RING_CENTER}
+                y2={RING_CENTER - TICK_OUTER}
+                stroke="var(--color-line-2)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                transform={`rotate(${angle} ${RING_CENTER} ${RING_CENTER})`}
+              />
+            ))}
+
             {/* 底下那圈轨道：永远完整，表示"一共多长" */}
             <circle
-              cx="44"
-              cy="44"
-              r="38"
+              cx={RING_CENTER}
+              cy={RING_CENTER}
+              r={RING_RADIUS}
               fill="none"
               stroke="var(--color-line)"
               strokeWidth="6"
             />
             {/* 上面那圈进度：从 0 画到 100% */}
             <circle
-              cx="44"
-              cy="44"
-              r="38"
+              cx={RING_CENTER}
+              cy={RING_CENTER}
+              r={RING_RADIUS}
               fill="none"
               stroke={urgent ? 'var(--color-brand)' : 'var(--color-cyan)'}
               strokeWidth="6"
@@ -229,7 +285,7 @@ export function RestTimer({
             />
           </svg>
 
-          {/* 环里那个数 */}
+          {/* 表盘中间那个数 */}
           <div
             className={`t-num text-2xl font-bold leading-none transition-colors duration-300 ${
               urgent ? 'text-brand' : 'text-ink'
@@ -239,28 +295,19 @@ export function RestTimer({
           </div>
         </div>
 
-        {/* ---------- 说明文字 ---------- */}
+        {/* ---------- 表盘右边：这块面板的标题 ---------- */}
         <div className="min-w-0 flex-1">
-          {/* 【这一行为什么不和下面的提示一样大】
-              以前它俩都是 12px 灰色，等于没有主次 ——
-              可"休息中"是这张卡的标题（告诉你这个数字是什么），
-              下面那行只是附注。标题必须比附注重，哪怕只重一点点。
-              所以这里升一档：13px、中等粗细、颜色也更实。 */}
-          <div className="text-sm font-medium text-ink-2">休息中</div>
-          {/* 这行字有两种形态：
-              能点的（还没授权，点一下去开）和普通的（已经好了，或者网页版）。
-              能点的那种用主色写，让人看得出"这里有东西可以按"。 */}
-          {onEnableNotify !== undefined ? (
-            <button
-              type="button"
-              onClick={onEnableNotify}
-              className="mt-1 block text-left text-xs text-brand underline"
-            >
-              {notifyHint}
-            </button>
-          ) : (
-            <div className="mt-1 text-xs text-muted">{notifyHint}</div>
-          )}
+          {/* 【这一行为什么升到了 text-base 并且用最实的字色】
+              以前它是 13px 浅灰，和下面那行附注几乎一样重 ——
+              可它是这张卡的标题（告诉你看的是什么数字）。
+              现在它是这一块里最重的一行，"休息中"三个字一眼就抓到。 */}
+          <div className="truncate text-base font-semibold text-ink">休息中</div>
+          {/* "设定 1:30"：这次休息在设置里定的长度。
+              写"设定"而不是"共"，是因为"共"会被读成"已经过去的总量"，
+              而它说的是"这一轮本来有多长"—— 两个意思差得远。 */}
+          <div className="t-num t-label mt-1 truncate">
+            设定 {formatSec(totalSec)}
+          </div>
         </div>
 
         <button
@@ -270,6 +317,28 @@ export function RestTimer({
         >
           跳过
         </button>
+      </div>
+
+      {/* ---------- 面板底下那行状态（"切走会不会提醒你"）----------
+          这一行以前挤在表盘右边那个窄栏里，20 来个字要折成两行，
+          把"休息中"那个标题也挤得没地方。
+          挪到整宽之后它一行就放得下，而且一条细线把它和上面分开 ——
+          它本来也就是"附注"，不该和标题抢同一栏。 */}
+      <div className="border-t border-line px-3.5 py-2">
+        {/* 这行字有两种形态：
+            能点的（还没授权，点一下去开）和普通的（已经好了，或者网页版）。
+            能点的那种用主色写，让人看得出"这里有东西可以按"。 */}
+        {onEnableNotify !== undefined ? (
+          <button
+            type="button"
+            onClick={onEnableNotify}
+            className="press block w-full text-left text-xs text-brand underline"
+          >
+            {notifyHint}
+          </button>
+        ) : (
+          <div className="text-xs text-muted">{notifyHint}</div>
+        )}
       </div>
     </div>
   )
