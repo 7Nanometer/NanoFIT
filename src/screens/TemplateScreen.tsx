@@ -267,7 +267,7 @@ function TemplateEditor({
           onClick={() =>
             onSave({ ...initial, name: name.trim(), items })
           }
-          className="press min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+          className="press min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-surface-2 disabled:text-muted disabled:shadow-none disabled:border disabled:border-line"
         >
           保存
         </button>

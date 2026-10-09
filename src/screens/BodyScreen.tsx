@@ -203,7 +203,7 @@ export function BodyScreen({ onBack }: { onBack: () => void }) {
       )}
 
       {/* ---------- 个人资料（体脂率公式要用的两样） ---------- */}
-      <div className="mb-5 card p-3">
+      <div className="ledger mb-2.5 p-3.5">
         <div className="t-label mb-1">个人资料</div>
         <p className="mb-3 text-xs text-muted">
           体脂率公式要用这两样。填一次就永久记住，以后不用再管。
@@ -218,7 +218,7 @@ export function BodyScreen({ onBack }: { onBack: () => void }) {
               onClick={() => saveProfile({ sex: s })}
               className={`min-h-11 flex-1 rounded-lg border text-sm ${
                 settings.sex === s
-                  ? 'border-brand bg-brand font-semibold text-on-brand'
+                  ? 'border-brand bg-brand/10 font-semibold text-brand'
                   : 'border-line-2 text-ink-2'
               }`}
             >
@@ -239,7 +239,7 @@ export function BodyScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* ---------- 录入 ---------- */}
-      <div className="mb-5 card p-3">
+      <div className="ledger mb-2.5 p-3.5">
         <div className="t-label mb-3">记一次</div>
 
         <label className="mb-1 block text-sm text-ink-2">量的是哪一天</label>
@@ -312,7 +312,7 @@ export function BodyScreen({ onBack }: { onBack: () => void }) {
           type="button"
           onClick={handleSave}
           disabled={!canSave}
-          className="press min-h-11 w-full rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+          className="press min-h-11 w-full rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-surface-2 disabled:text-muted disabled:shadow-none disabled:border disabled:border-line"
         >
           保存
         </button>
@@ -324,9 +324,9 @@ export function BodyScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* ---------- 历史列表 ---------- */}
-      <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+      <h2 className="sec">
         <span className="t-label">记录（{sorted.length} 条）</span>
-        <span className="h-px flex-1 bg-line" aria-hidden="true" />
+        <span className="sec-rule" aria-hidden="true" />
       </h2>
 
       {sorted.length > 0 && (
@@ -335,26 +335,27 @@ export function BodyScreen({ onBack }: { onBack: () => void }) {
         </p>
       )}
 
-      {sorted.map((m) => (
-        <div
-          key={m.date}
-          className="mb-2 flex items-center gap-3 card p-3"
-        >
-          <div className="flex-1">
-            <div className="text-base font-semibold text-ink">{formatDateCN(m.date)}</div>
-            <div className="mt-0.5 text-sm text-muted">
-              {describe(m)}
+      {sorted.length > 0 && (
+        <div className="ledger divide-y divide-line">
+          {sorted.map((m) => (
+            <div key={m.date} className="flex items-center gap-3 px-3.5 py-2.5">
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-semibold text-ink">
+                  {formatDateCN(m.date)}
+                </div>
+                <div className="mt-0.5 text-xs text-muted">{describe(m)}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDelete(m.date)}
+                className="press -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xs text-muted"
+              >
+                删除
+              </button>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleDelete(m.date)}
-            className="press -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xs text-muted"
-          >
-            删除
-          </button>
+          ))}
         </div>
-      ))}
+      )}
 
       {sorted.length === 0 && (
         <p className="py-10 text-center text-sm text-muted">

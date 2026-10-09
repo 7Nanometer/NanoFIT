@@ -135,9 +135,10 @@ export function MetPicker({
         </div>
 
         {/* ---------- 系统建议（整块，不是小标签）---------- */}
-        <div className="mb-3 rounded-lg border border-brand bg-brand/10 p-3">
+        <div className="mb-2.5 rounded-md border border-brand/40 p-3">
           <div className="text-sm font-medium text-ink">
-            系统建议：{metLabel(recommended)}
+            系统建议：
+            <span className="text-brand">{metLabel(recommended)}</span>
           </div>
           {reason !== '' && (
             <div className="mt-0.5 text-xs text-ink-2">依据：{reason}</div>
@@ -153,7 +154,7 @@ export function MetPicker({
             五个数字对齐成一列，才能一眼比出"这几档差多少"——
             主人原话是"不然我选的时候不知道差别有多大"。
             tabular-nums 是让数字等宽，不然 3.5 和 6.0 的小数点会对不齐。 */}
-        <div className="mb-2 grid gap-2">
+        <div className="ledger mb-2.5 divide-y divide-line">
           {STRENGTH_MET_INFO.map((item) => {
             const active = item.key === level
             return (
@@ -162,10 +163,17 @@ export function MetPicker({
                 type="button"
                 onClick={() => setLevel(item.key)}
                 // min-h-11 = 44 像素，手指点得准的最小尺寸
-                className={`flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 text-left text-sm ${
+                //
+                // 【选中那一行为什么从"整块实心橙"改成"淡橙底"】
+                // 它上面那个"系统建议"框原来也是橙底 —— 两块实心橙上下摞着，
+                // 分不清哪个是"建议"、哪个是"我已经选的"。
+                // 现在上面只留橙边（是提示），下面选中那行用淡橙底（是状态），
+                // 两个意思一眼分得开。五个选项也终于像"一列可选的值"，
+                // 而不是"五张各带边框的小卡片"。
+                className={`press flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm ${
                   active
-                    ? 'border-brand bg-brand font-semibold text-on-brand'
-                    : 'border-line-2 text-ink-2'
+                    ? 'bg-brand/10 font-semibold text-brand'
+                    : 'text-ink-2'
                 }`}
               >
                 {/* flex-1 把档位名撑开，后面的东西自然被推到右边 */}
@@ -178,8 +186,8 @@ export function MetPicker({
                   </span>
                 )}
                 <span
-                  className={`w-8 text-right tabular-nums ${
-                    active ? 'opacity-80' : 'text-muted'
+                  className={`t-num w-8 text-right ${
+                    active ? '' : 'text-muted'
                   }`}
                 >
                   {item.met.toFixed(1)}
@@ -191,7 +199,7 @@ export function MetPicker({
 
         {/* ---------- 选的和建议不一样（★ 这行是这次加的重点）---------- */}
         {deviated && (
-          <p className="mb-2 rounded-lg border border-brand bg-brand/10 p-3 text-sm text-brand">
+          <p className="mb-2.5 rounded-md border border-brand/40 p-3 text-sm text-brand">
             {/* 整句拼成一个字符串再渲染，是为了不让 JSX 在换行处
                 自作主张地塞空格或吃掉空格（引号「」里多一个空格很扎眼）。
                 强调"你选的"要用 span + CSS —— 这里写 markdown 的星号

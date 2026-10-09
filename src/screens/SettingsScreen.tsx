@@ -17,6 +17,7 @@ import { readSettings, writeSettings } from '../lib/storage'
 import { applyTheme } from '../lib/theme'
 import { textToNumber } from '../lib/calc'
 import { NumberField } from '../components/NumberField'
+import { Switch } from '../components/Switch'
 import { VersionLine } from '../components/VersionLine'
 import { BodyScreen } from './BodyScreen'
 import { LibraryScreen } from './LibraryScreen'
@@ -430,7 +431,7 @@ export function SettingsScreen() {
                   type="button"
                   onClick={saveDefaultWeight}
                   disabled={!weightValid}
-                  className="press min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+                  className="press min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-surface-2 disabled:text-muted disabled:shadow-none disabled:border disabled:border-line"
                 >
                   保存
                 </button>
@@ -467,23 +468,7 @@ export function SettingsScreen() {
               自感用力程度 1-10。关掉就少填一个框。
             </div>
           </div>
-          {/* 【为什么把"开/关"两个字换成一个滑动开关】
-              写"开"的时候，你看到它并不能确定是"现在是开"还是"点了会开"——
-              一个字的状态标签天生就有这个歧义，得点一下才知道。
-              轨道 + 滑块是全世界都认的开关样子，位置本身就是答案，没有歧义。
-              圆钮始终是白色：无论底色是灰轨道还是橙色轨道、
-              无论是日间还是夜间，白色都看得见。 */}
-          <span
-            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
-              settings.rpeEnabled ? 'bg-brand' : 'bg-line-2'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-snap ${
-                settings.rpeEnabled ? 'translate-x-[22px]' : 'translate-x-0.5'
-              }`}
-            />
-          </span>
+          <Switch checked={settings.rpeEnabled} />
         </button>
 
         <SettingRow

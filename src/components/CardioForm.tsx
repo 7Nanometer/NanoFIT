@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Exercise } from '../types'
 import { RUNNING_IDS, cardioExercises } from '../data/exercises'
 import { NumberField } from './NumberField'
+import { Switch } from './Switch'
 import {
   formatDistance,
   formatDuration,
@@ -174,9 +175,11 @@ export function CardioForm({
                 key={item.id}
                 type="button"
                 onClick={() => setExerciseId(item.id)}
-                className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
+                // 和动作库、动作选择器的筛选胶囊用同一套选中样式
+                //（淡橙底 + 橙字 + 橙边）—— 同一个东西在哪儿都长得一样
+                className={`press min-h-11 shrink-0 rounded-full border px-4 text-sm ${
                   active
-                    ? 'border-brand bg-brand font-semibold text-on-brand'
+                    ? 'border-brand bg-brand/10 font-semibold text-brand'
                     : 'border-line-2 text-ink-2'
                 }`}
               >
@@ -239,16 +242,18 @@ export function CardioForm({
 
         {/* ---------- 操场模式（只有跑步类用得上） ---------- */}
         {isRunning && (
-          <div className="mb-4 rounded-lg border border-line-2 p-3">
-            <label className="flex min-h-11 items-center gap-2 text-sm text-ink-2">
-              <input
-                type="checkbox"
-                checked={trackMode}
-                onChange={(e) => setTrackMode(e.target.checked)}
-                className="h-5 w-5 accent-[var(--color-brand)]"
-              />
-              操场模式（按道次和圈数算距离）
-            </label>
+          <div className="mb-4 rounded-md border border-line p-3">
+            {/* 整行都是按钮：手指点得准，不用非得戳中那个小方块 */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={trackMode}
+              onClick={() => setTrackMode(!trackMode)}
+              className="press flex min-h-11 w-full items-center gap-3 text-left text-sm text-ink-2"
+            >
+              <span className="flex-1">操场模式（按道次和圈数算距离）</span>
+              <Switch checked={trackMode} />
+            </button>
 
             {trackMode && (
               <div className="mt-3">
@@ -351,7 +356,7 @@ export function CardioForm({
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-surface-2 disabled:text-muted disabled:shadow-none disabled:border disabled:border-line"
           >
             保存
           </button>

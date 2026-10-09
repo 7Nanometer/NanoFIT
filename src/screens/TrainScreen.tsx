@@ -1390,7 +1390,7 @@ function ExerciseCard({
               // 【没填好时：灰底、灰字、没有光晕】
               // 这三样一起去掉，按钮就"沉"下去了 —— 一眼看出现在按不动，
               // 而不是按下去之后才发现没反应。
-              className="press min-h-11 w-full rounded-lg bg-brand text-xl font-bold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+              className="press min-h-11 w-full rounded-lg bg-brand text-xl font-bold text-on-brand shadow-[var(--elev-brand)] disabled:bg-surface-2 disabled:text-muted disabled:shadow-none disabled:border disabled:border-line"
             >
               ✓
             </button>

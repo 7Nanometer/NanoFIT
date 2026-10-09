@@ -116,7 +116,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+            className="press min-h-11 flex-1 rounded-lg bg-brand font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-surface-2 disabled:text-muted disabled:shadow-none disabled:border disabled:border-line"
           >
             保存
           </button>

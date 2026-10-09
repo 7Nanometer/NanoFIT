@@ -5,6 +5,7 @@ import { StatsScreen } from './screens/StatsScreen'
 import { TrainScreen } from './screens/TrainScreen'
 import { exitApp, handleBack, onBackButton } from './lib/backbutton'
 import { onRestNotifyTap } from './lib/restnotify'
+import { tapFeedback } from './lib/beep'
 import {
   Bars,
   CalendarIcon,
@@ -68,6 +69,10 @@ function App() {
   // 爬到设置页的上面去。结果：你在「设置 → 身体数据」里按返回，
   // 会被这句"切回训练页"抢先处理，直接跳过设置列表页。
   // 所以监听只挂一次（依赖数组留空），当前 tab 靠这个 ref 现读。
+  // 当前是第几个 tab（0、1、2、3）。底部那根会滑动的指示条要靠它算位置 ——
+  // 存成"第几个"而不是"叫什么"，是因为滑条按格数平移，不认名字。
+  const tabIndex = TABS.findIndex((item) => item.key === tab)
+
   const tabRef = useRef(tab)
   useEffect(() => {
     tabRef.current = tab
@@ -158,7 +163,29 @@ function App() {
         // 容易出现"内容从导航条里透出来"的怪样子。
         className="sticky bottom-0 z-10 border-t border-line bg-bg pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       >
-        <div className="mx-auto flex w-full max-w-[480px]">
+        <div className="relative mx-auto flex w-full max-w-[480px]">
+          {/* ---------- 会滑动的那根指示条 ----------
+              【为什么是一根会动的条，而不是每格自己一根】
+              上一版是"每个 tab 各有一根横条，选中的那根显形、别的不透明度归零"。
+              看着一样，但切换时是**瞬间换位**的 —— 眼睛会以为页面跳了一下。
+              现在只有一根，它从原来那一格平移到新那一格，
+              于是"你从哪儿挪到了哪儿"这件事被说清楚了。
+              （ease-snap 是那个"冲过头再弹回来"的曲线，走起来有手感。）
+
+              【为什么宽度是 25%】
+              四个 tab 各占 flex-1，也就是四分之一。这根条占满一格宽，
+              translateX 按"第几格 × 100%"平移 —— 换 tab 只需要改一个数。
+              这种"跟着数据算位置"的写法，以后加减 tab 都不用改这里。 */}
+          <span
+            className="pointer-events-none absolute left-0 top-0 h-0.5 w-1/4 transition-transform duration-250 ease-snap"
+            style={{ transform: `translateX(${tabIndex * 100}%)` }}
+            aria-hidden="true"
+          >
+            {/* 里面这根才是看得见的那一小段：占满整格太长了，
+                两头各留 16 像素，看着才像"一格指示灯"而不是一条分割线。 */}
+            <span className="mx-4 block h-full rounded-full bg-brand" />
+          </span>
+
           {TABS.map((item) => {
             const isActive = item.key === tab
             // 从 TabIcons 里取出这个 tab 对应的图标组件
@@ -167,22 +194,19 @@ function App() {
               <button
                 key={item.key}
                 type="button"
-                onClick={() => setTab(item.key)}
+                onClick={() => {
+                  setTab(item.key)
+                  // 切页时轻轻"嗒"一下 —— 和记一组、点按钮用的是同一个反馈。
+                  // 手指落在屏幕上、眼睛看着别处的时候，这一下就是"换过去了"的回执。
+                  // 电脑和 iPhone 浏览器上没有这个能力，tapFeedback 内部会忽略掉。
+                  tapFeedback()
+                }}
                 // min-h-14 = 56 像素。比 44 的最低要求高一点，
                 // 因为多了图标之后是"图标 + 文字"上下两行，要占地方。
-                className={`relative flex min-h-14 flex-1 flex-col items-center justify-center gap-1 pt-2 text-xs transition-colors duration-200 ${
+                className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-1 pt-2 text-xs transition-colors duration-200 ${
                   isActive ? 'font-semibold text-brand' : 'text-muted'
                 }`}
               >
-                {/* 顶上那根小横条 —— 像面板上被点亮的一格指示灯，
-                    告诉你"现在停在哪儿"。
-                    没选中的那几格不是没有，是把不透明度降到 0
-                    （所以它一直在那儿占着位置，横条不会一会儿有一会儿没）。 */}
-                <span
-                  className={`absolute top-0 h-0.5 w-8 rounded-full bg-brand transition-opacity duration-200 ${
-                    isActive ? 'opacity-100' : 'opacity-0'
-                  }`}
-                />
                 {/* 图标跟着一起动：选中时稍微放大一点点。
                     颜色不用管，它用的是 currentColor，会跟着按钮的文字色走。 */}
                 <Icon

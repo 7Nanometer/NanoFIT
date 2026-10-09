@@ -42,31 +42,35 @@ export function TemplatePicker({
         </p>
 
         <div className="flex-1 overflow-y-auto">
+          <div className="ledger divide-y divide-line">
           {templates.map((template) => (
             <button
               key={template.id}
               type="button"
               onClick={() => onPick(template)}
-              className="press mb-2 w-full card p-3 text-left"
+              className="press w-full px-3.5 py-2.5 text-left"
             >
               <div className="flex items-center gap-2">
-                <span className="flex-1 font-medium text-ink">
+                <span className="flex-1 truncate text-base font-medium text-ink">
                   {template.name}
                 </span>
                 {template.id.startsWith('preset-') && (
-                  <span className="shrink-0 text-xs text-muted">预置</span>
+                  <span className="shrink-0 rounded border border-line-2 px-1.5 py-0.5 text-xs text-muted">
+                    预置
+                  </span>
                 )}
               </div>
-              <div className="mt-1 text-sm text-muted">
+              <div className="mt-0.5 text-xs text-muted">
                 {template.items.length} 个动作
               </div>
-              <div className="mt-1 text-xs text-muted">
+              <div className="mt-0.5 text-xs text-muted">
                 {template.items
                   .map((item) => exerciseName(allExercises, item.exerciseId))
                   .join('、')}
               </div>
             </button>
           ))}
+          </div>
         </div>
       </div>
     </div>

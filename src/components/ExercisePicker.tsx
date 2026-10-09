@@ -76,7 +76,7 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
             onClick={() => setFilter('all')}
             className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
               filter === 'all'
-                ? 'border-brand bg-brand font-semibold text-on-brand'
+                ? 'border-brand bg-brand/10 font-semibold text-brand'
                 : 'border-line-2 text-ink-2'
             }`}
           >
@@ -92,7 +92,7 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
               onClick={() => setFilter(group)}
               className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
                 filter === group
-                  ? 'border-brand bg-brand font-semibold text-on-brand'
+                  ? 'border-brand bg-brand/10 font-semibold text-brand'
                   : 'border-line-2 text-ink-2'
               }`}
             >
@@ -103,27 +103,31 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
 
         {/* ---------- 动作列表（可滚动）---------- */}
         <div className="flex-1 overflow-y-auto">
+          {/* 列表用账本写法（细线分行），和动作库那一页保持一致 ——
+              同一个东西在两个地方长得一样，不用各学一遍 */}
+          <div className="ledger divide-y divide-line">
           {list.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onPick(item.id)}
-              className="press mb-2 flex w-full items-center gap-2 card p-3 text-left"
+              className="press flex w-full items-center gap-2 px-3.5 py-2.5 text-left"
             >
-              <div className="flex-1">
-                <div className="font-medium text-ink">{item.name}</div>
-                <div className="mt-0.5 text-sm text-muted">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-base font-medium text-ink">{item.name}</div>
+                <div className="mt-0.5 text-xs text-muted">
                   {MUSCLE_LABELS[item.muscleGroup]}
                   {item.equipment !== '' && ` · ${item.equipment}`}
                 </div>
               </div>
               {item.isCustom && (
-                <span className="shrink-0 rounded bg-brand/20 px-1.5 py-0.5 text-xs text-brand">
+                <span className="shrink-0 rounded border border-brand/40 px-1.5 py-0.5 text-xs text-brand">
                   自建
                 </span>
               )}
             </button>
           ))}
+          </div>
 
           {list.length === 0 && (
             <p className="py-12 text-center text-sm text-muted">
