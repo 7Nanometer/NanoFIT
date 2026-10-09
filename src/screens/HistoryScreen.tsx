@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Exercise, WorkoutSession } from '../types'
-import { mergeExercises } from '../data/exercises'
+import { cardioIdSet, mergeExercises } from '../data/exercises'
 import {
   readBodyMetrics,
   readCustomExercises,
@@ -9,7 +9,8 @@ import {
   writeSessions,
 } from '../lib/storage'
 import { resolveWeightKg, sessionStartISO } from '../lib/kcal'
-import { SessionCard } from '../components/SessionCard'
+import { sessionVolume } from '../lib/calc'
+import { SessionRow } from '../components/SessionRow'
 
 // ============================================================
 // 历史页
@@ -81,6 +82,31 @@ export function HistoryScreen() {
   }
   const usedExercises = allExercises.filter((e) => usedIds.has(e.id))
 
+  // ---------- 账本底下那行"合计" ----------
+  //
+  // 【为什么要有它】
+  // 一列训练记录读下来，人自然会问"那么多加起来是多少"。
+  // 纸质账本每页底下都有一行合计，这是账本这个形式本身就带着的东西 ——
+  // 所以它不是为了"多加个功能"，是为了让这一页**完整**。
+  // 顺带它也把下面那片空白收住了：一个块有头有尾，比一堆行飘在半空稳。
+  //
+  // 【为什么只在两条以上才显示】
+  // 只有一条时，"合计"和上面那条的数字一模一样，纯属重复。
+  //
+  // 【为什么跟着筛选走】
+  // 你筛出"只看练过深蹲的"，下面合计就该是这些深蹲的合计 ——
+  // 那才是这一页正在给你看的那批数据。所以它算的是 list（筛过的），
+  // 不是 sessions（全部）。
+  //
+  // 【为什么只算力量】
+  // 有氧记录的 weightKg 是 0（见 types.ts 的说明），
+  // 混进来加一遍等于没加，但会让"合计 4,230 kg"这个数变得没法解释。
+  const cardioIds = cardioIdSet(allExercises)
+  const totalVolumeKg = list.reduce((sum, s) => {
+    const strength = s.entries.filter((e) => !cardioIds.has(e.exerciseId))
+    return sum + (strength.length > 0 ? sessionVolume(strength) : 0)
+  }, 0)
+
   function handleDelete(sessionId: string) {
     const target = sessions.find((s) => s.id === sessionId)
     const confirmed = window.confirm(
@@ -131,20 +157,52 @@ export function HistoryScreen() {
         </select>
       )}
 
-      {/* ---------- 记录列表 ---------- */}
-      {list.map((session) => (
-        <SessionCard
-          key={session.id}
-          session={session}
-          allExercises={allExercises}
-          weightKg={weightKg}
-          expanded={expandedId === session.id}
-          onToggle={() =>
-            setExpandedId(expandedId === session.id ? null : session.id)
-          }
-          onDelete={() => handleDelete(session.id)}
-        />
-      ))}
+      {/* ---------- 记录列表 ----------
+          所有记录装在**一个** .ledger 块里，行与行之间只用一根细线分开。
+          divide-y 是 Tailwind 的写法："给除了第一个以外每个孩子加一条上边线"，
+          正好就是账本的画法。
+          （以前每条是一张独立卡片，卡与卡之间空 10px ——
+            三条记录下面就是一大片空白，看着像内容没加载完。） */}
+      {list.length > 0 && (
+        <div className="ledger">
+          {/* divide-y = "给除了第一个以外每个孩子加一条上边线"，
+              正好就是账本一行行画下去的画法 */}
+          <div className="divide-y divide-line">
+            {list.map((session, index) => (
+              <SessionRow
+                key={session.id}
+                index={index}
+                session={session}
+                allExercises={allExercises}
+                weightKg={weightKg}
+                expanded={expandedId === session.id}
+                onToggle={() =>
+                  setExpandedId(expandedId === session.id ? null : session.id)
+                }
+                onDelete={() => handleDelete(session.id)}
+              />
+            ))}
+          </div>
+
+          {/* ---------- 合计行 ----------
+              上面那条线比表格里别的线粗一档（2px 而不是 1px）——
+              纸质账本里，合计上面画的是双线，意思就是"从这里开始是总数，
+              不是明细了"。这一条粗线是同一个作用。
+              左边空出 3.5rem 对齐行号栏右边的正文。 */}
+          {list.length > 1 && totalVolumeKg > 0 && (
+            <div className="flex items-baseline gap-2 border-t-2 border-line-2 py-3 pl-12 pr-3.5">
+              <span className="t-label">合计</span>
+              <span className="t-num text-lg font-bold text-ink">
+                {Math.round(totalVolumeKg).toLocaleString()}
+              </span>
+              <span className="t-unit">kg</span>
+              <span className="ml-auto text-xs text-muted">
+                {list.length} 次训练
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ---------- 空状态 ---------- */}
       {sessions.length === 0 && (

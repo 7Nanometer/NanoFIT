@@ -5,19 +5,31 @@ import { describeCardio, formatDuration, sessionVolume } from '../lib/calc'
 import { formatKcal, metLabel, sessionKcal, sessionSeconds } from '../lib/kcal'
 
 // ============================================================
-// 历史记录里的一条
+// 历史记录里的一行
 // ============================================================
 // 有两种样子：
-//   收起来时 —— 只显示一行摘要（几月几号、几个动作、多少组、总容量）
+//   收起来时 —— 日期 + 一行摘要（总容量、几个动作、时长档位热量）
 //   点开后   —— 显示每个动作、每一组的重量 × 次数
 //
 // 【为什么默认收起来】
 // 练了半年就有 100 多条记录，全部展开会长得没法看。
 // 摘要里放"总容量"这个数字，是因为它最能反映"这次练了多少"，
 // 拿来跟以前比进步最直观。
+//
+// 【这一轮从"一张卡"改成了"账本里的一行"】
+// 以前每条训练是一张独立卡片，卡与卡之间空 10px。三条记录下面就是
+// 一大片空白，看着像"内容没加载完"。
+// 现在所有记录装在同一个 .ledger 块里，行与行之间只用一根细线分开：
+//   · 同样高度能多放下两三行
+//   · 左边多了一列行号（01、02…），它们串成一条竖线，
+//     眼睛沿着这列往下走，比看一堆卡片稳得多
+//   · "一共有几条"变成一眼可数的事
+// 这就是账本和卡片堆的区别：一个是"一本"，一个是"一叠"。
 // ============================================================
 
 type Props = {
+  // 这是第几条（从 1 开始）。只用来显示左边那个行号。
+  index: number
   session: WorkoutSession
   allExercises: Exercise[] // 用来把动作 id 翻成中文名
   // 算热量估算用的体重。没有就传 undefined —— 那就不显示热量。
@@ -27,7 +39,8 @@ type Props = {
   onDelete: () => void
 }
 
-export function SessionCard({
+export function SessionRow({
+  index,
   session,
   allExercises,
   weightKg,
@@ -51,7 +64,7 @@ export function SessionCard({
     .filter((s) => cardioIds.has(s.exerciseId))
     .reduce((sum, s) => sum + (s.durationSec ?? 0), 0)
 
-  // ---------- 收起时的两行怎么排 ----------
+  // ---------- 收起时的三行怎么排 ----------
   //
   // 【改之前为什么难读】
   // 原来是一整句：「2 个动作 · 3 组 · 总容量 1,560 kg」。
@@ -59,16 +72,20 @@ export function SessionCard({
   // 却和"个动作""组"这些字一样大、一样颜色 —— 得逐字读才能挑出来。
   //
   // 【现在怎么排】
-  // 把总容量拎出来当这一条的"主数字"：单独放大、加粗、变成主文字色；
-  // 动作数和组数退到同一行的右边，用小字浅色。
-  // 这样一列卡片从上往下扫，看到的是一串大小差不多的数字，
+  // 第一行：几月几号（这一条的身份）
+  // 第二行：总容量当主数字（放大加粗）+ 右边小字写"几个动作几组"
+  // 第三行：时长 · 档位 · 热量（这三样正好是热量公式的三个输入，
+  //         排在一起是为了让人能自己核对）
+  // 这样一列往下扫，看到的是一串大小差不多的容量数字，
   // **进步还是退步，扫一眼就比出来了** —— 这才是历史页存在的意义。
 
   // 这里单独数一遍"几个动作"，不能用上面 groups.length ——
   // 那个把有氧动作也算进去了
   const strengthGroups = new Set(strengthEntries.map((s) => s.exerciseId)).size
   const volumeKg =
-    strengthEntries.length > 0 ? Math.round(sessionVolume(strengthEntries)) : null
+    strengthEntries.length > 0
+      ? Math.round(sessionVolume(strengthEntries))
+      : null
   const countText =
     strengthEntries.length > 0
       ? `${strengthGroups} 个动作 · ${strengthEntries.length} 组`
@@ -78,19 +95,13 @@ export function SessionCard({
   // 就把有氧时长顶上"主数字"的位置，否则那一行会空着
   const cardioOnly = volumeKg === null && cardioSeconds > 0
 
-  // ---------- 第二行：时长 · 档位 · 热量（★ 2026-09-24 加的）----------
+  // ---------- 第三行：时长 · 档位 · 热量（★ 2026-09-24 加的）----------
   //
   // 【为什么档位必须显示出来】
   // 整个界面以前**从来不显示**它 —— 存了哪一档，用户无从核对。
   // 有人对着统计页的 113 千卡怎么算都对不上，只能来问为什么。
   // 而档位恰恰是热量公式里最大的变量（3.0 和 6.0 差一倍），
   // 它必须看得见，用户才能自己发现问题。
-  //
-  // 【为什么单独占一行，而不是接在上面那行后面】
-  // 实测过 375px 手机宽度：接在后面会挤成两行，而且中文会在
-  // "低/强度"这种地方硬断开，很难看。单开一行还有个好处 ——
-  // 这三样正好就是热量公式的三个输入（档位 × 时长 → 热量），
-  // 排在一起，用户一眼就能核对。
   const detailParts: string[] = []
 
   // 【为什么只在有力量记录时显示时长和档位】
@@ -123,83 +134,95 @@ export function SessionCard({
   }
 
   return (
-    <div className="card mb-2.5 overflow-hidden">
-      {/* ---------- 收起来时的样子（整个卡片都能点） ---------- */}
+    <div>
+      {/* ---------- 收起来时的样子（整行都能点）----------
+          两列网格：左边一条窄窄的行号栏，右边是全部内容。
+          用网格而不是"行号 + 缩进"，是因为网格能保证**每一条的
+          正文都从同一个 x 开始** —— 这是整页对齐的关键。 */}
       <button
         type="button"
         onClick={onToggle}
-        className="press w-full p-3.5 text-left"
+        className="press grid w-full grid-cols-[1.5rem_1fr] items-start gap-x-2.5 px-3.5 py-2.5 text-left"
       >
-        {/* 第一行：日期（左） + 展开/收起 + 一个会转的箭头（右） */}
-        <div className="flex items-center gap-1.5">
-          <span className="flex-1 truncate text-base font-semibold text-ink">
-            {formatDateCN(session.date)}
-            {session.name !== undefined && ` · ${session.name}`}
-          </span>
-          <span className="shrink-0 text-xs text-muted">
-            {expanded ? '收起' : '展开'}
-          </span>
-          {/* 箭头本身就是"能点开"的通用符号，比"展开"两个字更快被认出来。
-              展开时转 180 度 —— 这一点转动把"状态变了"说清楚了，
-              否则内容一多一少，眼睛会以为是页面跳了一下。
-              两个都给（文字 + 箭头）是因为主人是新手：
-              单给箭头怕他没意识到能点，单给文字又不如箭头快。 */}
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            className={`h-4 w-4 shrink-0 text-muted transition-transform duration-250 ease-mech ${
-              expanded ? 'rotate-180' : ''
-            }`}
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </div>
+        <span className="t-index mt-1">{String(index + 1).padStart(2, '0')}</span>
 
-        {/* 第二行：主数字（左） + 动作数/组数（右） */}
-        <div className="mt-1.5 flex items-baseline gap-1.5">
-          {volumeKg !== null && (
-            <>
-              {/* 顺序是"名称 → 数字 → 单位"。
-                  写成"数字 → 单位 → 名称"（1,560 KG 总容量）会读成倒装，
-                  得回头再看一眼才明白；中文里"总容量 1,560 kg"才是顺着念的。 */}
-              <span className="t-label">总容量</span>
-              <span className="t-num text-lg font-semibold text-ink">
-                {volumeKg.toLocaleString()}
-              </span>
-              <span className="t-label">kg</span>
-            </>
-          )}
-          {/* 纯有氧的那一天：把一个"时长"顶上主数字的位置，
-              否则这一行会空着、卡片看着像缺了东西 */}
-          {cardioOnly && (
-            <span className="t-num text-lg font-semibold text-ink">
-              {formatDuration(cardioSeconds)}
+        <div className="min-w-0">
+          {/* 第一行：日期（左） + 展开/收起 + 一个会转的箭头（右） */}
+          <div className="flex items-center gap-1.5">
+            <span className="flex-1 truncate text-base font-semibold text-ink">
+              {formatDateCN(session.date)}
+              {session.name !== undefined && ` · ${session.name}`}
             </span>
-          )}
-          {countText !== '' && (
-            <span className="ml-auto shrink-0 text-xs text-muted">
-              {countText}
+            <span className="shrink-0 text-xs text-muted">
+              {expanded ? '收起' : '展开'}
             </span>
-          )}
-        </div>
-
-        {/* 第三行：这次怎么算的（时长 · 档位 · 热量）。
-            比上面两行再退一档 —— 它是"用来核对的"，不是"用来比的"。 */}
-        {detailParts.length > 0 && (
-          <div className="mt-1 text-xs text-muted">
-            {detailParts.join(' · ')}
+            {/* 箭头本身就是"能点开"的通用符号，比"展开"两个字更快被认出来。
+                展开时转 180 度 —— 这一点转动把"状态变了"说清楚了，
+                否则内容一多一少，眼睛会以为是页面跳了一下。
+                两个都给（文字 + 箭头）是因为主人是新手：
+                单给箭头怕他没意识到能点，单给文字又不如箭头快。 */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className={`h-4 w-4 shrink-0 text-muted transition-transform duration-250 ease-mech ${
+                expanded ? 'rotate-180' : ''
+              }`}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </div>
-        )}
+
+          {/* 第二行：主数字（左） + 动作数/组数（右） */}
+          <div className="mt-1 flex items-baseline gap-1.5">
+            {volumeKg !== null && (
+              <>
+                {/* 顺序是"名称 → 数字 → 单位"。
+                    写成"数字 → 单位 → 名称"（1,560 KG 总容量）会读成倒装，
+                    得回头再看一眼才明白；中文里"总容量 1,560 kg"才是顺着念的。
+                    单位用 .t-unit 压小压淡 —— 一列数字里，单位每行都一样，
+                    不该和数字抢分量。 */}
+                <span className="t-label">总容量</span>
+                <span className="t-num text-lg font-semibold text-ink">
+                  {volumeKg.toLocaleString()}
+                </span>
+                <span className="t-unit">kg</span>
+              </>
+            )}
+            {/* 纯有氧的那一天：把一个"时长"顶上主数字的位置，
+                否则这一行会空着、看着像缺了东西 */}
+            {cardioOnly && (
+              <span className="t-num text-lg font-semibold text-ink">
+                {formatDuration(cardioSeconds)}
+              </span>
+            )}
+            {countText !== '' && (
+              <span className="ml-auto shrink-0 text-xs text-muted">
+                {countText}
+              </span>
+            )}
+          </div>
+
+          {/* 第三行：这次怎么算的（时长 · 档位 · 热量）。
+              比上面两行再退一档 —— 它是"用来核对的"，不是"用来比的"。 */}
+          {detailParts.length > 0 && (
+            <div className="mt-1 text-xs text-muted">
+              {detailParts.join(' · ')}
+            </div>
+          )}
+        </div>
       </button>
 
-      {/* ---------- 点开后的样子 ---------- */}
+      {/* ---------- 点开后的样子 ----------
+          底下垫一层更深的底色（surface-2），让它一眼看出是"嵌在这一行里的"，
+          而不是这一行本身变长了。左边那 14px 的缩进是留给行号栏的 ——
+          展开的内容和上面的正文对齐在同一条竖线上。 */}
       {expanded && (
-        <div className="animate-fade border-t border-line p-3.5">
+        <div className="animate-fade border-t border-line bg-surface-2 px-3.5 py-3 pl-12">
           {groups.map((group) => {
             const isCardio = cardioIds.has(group.exerciseId)
             return (
@@ -208,37 +231,34 @@ export function SessionCard({
                     和下面一行行的数据不是一类东西。做小了才像标题，
                     做大了反而会和每组的"80 kg × 8"抢着被执行。 */}
                 <div className="t-label mb-1.5">{group.name}</div>
-                {group.sets.map((set, index) =>
+                {group.sets.map((set, setIndex) =>
                   isCardio ? (
                     // 有氧：一条就是一句话，没有组号也没有 RPE
                     <div
                       key={set.id}
-                      className="well mb-1 px-3 py-2 text-sm text-ink"
+                      className="t-num py-1 text-sm text-ink"
                     >
-                      <span className="t-num">{describeCardio(set)}</span>
+                      {describeCardio(set)}
                     </div>
                   ) : (
-                    // 和训练页的组记录排法保持一致（组号 / 重量×次数 / RPE）——
+                    // 和训练页的组记录排法保持一致（组号 / 重量 / 次数 / RPE）——
                     // 这样刚记完的训练和翻出来看的老记录，读法是同一个，
-                    // 不用在两套排版之间切换脑子
+                    // 不用在两套排版之间切换脑子。
+                    // 数字右对齐，一列数字的右边缘落在同一条竖线上。
                     <div
                       key={set.id}
-                      className="well mb-1 flex items-center gap-2.5 px-3 py-2 text-sm"
+                      className="grid grid-cols-[1.25rem_1fr_1fr_2.5rem] items-baseline gap-x-2 py-1"
                     >
-                      <span className="t-num w-4 shrink-0 text-center text-xs font-medium text-muted">
-                        {index + 1}
-                      </span>
-                      <span className="t-num flex-1 font-medium text-ink">
+                      <span className="t-index">{setIndex + 1}</span>
+                      <span className="t-num text-right text-sm font-medium text-ink">
                         {set.weightKg}
-                        <span className="ml-0.5 font-normal text-muted">kg</span>
-                        <span className="mx-1 text-muted">×</span>
+                      </span>
+                      <span className="t-num text-right text-sm font-medium text-ink">
                         {set.reps}
                       </span>
-                      {set.rpe !== undefined && (
-                        <span className="t-num shrink-0 rounded bg-surface px-1.5 py-0.5 text-xs text-ink-2">
-                          RPE {set.rpe}
-                        </span>
-                      )}
+                      <span className="t-num text-right text-xs text-ink-2">
+                        {set.rpe ?? ''}
+                      </span>
                     </div>
                   ),
                 )}
@@ -252,7 +272,7 @@ export function SessionCard({
           <button
             type="button"
             onClick={onDelete}
-            className="press mt-1 min-h-11 w-full rounded-lg border border-line-2 text-sm text-muted"
+            className="press mt-2 min-h-11 w-full rounded-lg border border-line-2 text-sm text-muted"
           >
             删除这次训练
           </button>
