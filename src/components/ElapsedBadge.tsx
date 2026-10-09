@@ -76,6 +76,10 @@ export function ElapsedBadge({ startedAt, stale, lastSetISO }: Props) {
       // 正在走的时候用主色标出来 —— 这一格是全页唯一"活着"的数字，
       // 颜色让它和其他只读读数区分开（一眼看出"这是在计时"）。
       accent={!useLastSet}
+      // 【这一格不要"跳"】
+      // 别的读数格是"你操作了才会变"，跳一下是回执。
+      // 这一格每 5 秒自己变一次 —— 跟着一起跳就成了每隔 5 秒抖一下的干扰。
+      pulse={false}
     />
   )
 }
