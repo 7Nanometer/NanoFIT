@@ -485,6 +485,45 @@ versionName "2026.09.24 · 18d4d1a"    // = 日期 · 7 位存档号
 - ★ 中文/特殊字符会不会被 Gradle 弄坏（Windows 上默认编码可能是 GBK）——
   打完后用 `aapt2 dump badging` 验一遍
 
+### 打完包之后要做的四件事（2026-10-09 定的）
+
+包的存放位置（**仓库外面**，不进 git）：
+`E:\Vibe Coding\Nanofit\安卓安装包\` ——
+`NanoFIT.apk` 永远是最新版那一格，`历史版本\` 里是带版本号的老包。
+
+顺序不能乱，尤其第 1 步必须在编译**之前**：
+
+1. **先归档旧包**（在编译新包之前做，否则新包会把老的盖掉）：
+   ```bash
+   cd "E:/Vibe Coding/Nanofit/安卓安装包"
+   cp -p NanoFIT.apk "历史版本/NanoFIT-<旧版本名>.apk"
+   ```
+   `cp -p` 的 `-p` 是"保留原来的修改时间"——归档件的时间戳应该是它
+   被造出来的那天，不是被复制的那天。
+   复制完**立刻对一遍校验和**（`sha256sum` 两边都要跑）：
+   备份最怕的就是默默复制坏掉，而对校验和是唯一能发现它的办法。
+
+2. **编译**：`npm run build && npx cap sync android && cd android && ./gradlew assembleDebug`
+   （网页代码改完**必须先 build 再 sync**，否则打进包里的是旧网页资源）
+
+3. **验三样**（三样都过了才能往手机上装）：
+   - `aapt2 dump badging` 看 versionCode / versionName —— 顺带验中文有没有被 Gradle 弄坏
+   - `apksigner verify --print-certs` 看签名 —— **必须和上一个包的 SHA-256 逐位相同**。
+     不同就意味着手机上装不上（只能先卸载，而卸载 = 训练数据全没）
+   - 把 APK 当压缩包解开，确认 `assets/public/assets/index-*.css` 里
+     有这次改动的痕迹、没有上一版删掉的东西（新代码真的打进去了）
+
+4. **装进最新版那一格**，再对一遍校验和：
+   ```bash
+   cp android/app/build/outputs/apk/debug/app-debug.apk "../../../安卓安装包/NanoFIT.apk"
+   ```
+   注意**不能用 `cp -p`**：最新版那一格的时间戳应该是"这次打包的时间"，
+   保留旧时间戳会让人以为没更新。
+
+★ 用的是 **assembleDebug 不是 assembleRelease**，别改。
+debug 包的签名来自这台电脑的 `~/.android/debug.keystore`（自动生成、不随仓库走）；
+换成 release 会生成一把全新的钥匙，签名一变手机上就只能先卸载 —— 数据全丢。
+
 ### 打包环境（2026-09-23 装好并验证过）
 
 - **Android Studio**：`C:\Program Files\Android\Android Studio`（自带 JBR **25**）
