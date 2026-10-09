@@ -62,16 +62,29 @@ import { chartColors } from '../lib/theme'
 // ============================================================
 // 统计页
 // ============================================================
-// 四组内容：
-//   1. 顶部两个大数字：本周练了多少、最近一次练了多少
-//   2. 柱状图：最近 8 周每周的总容量
-//   3. 三张折线图：选定的那个动作，重量 / 容量 / 估算 1RM 的变化
-//   4. 身体数据趋势
+// 分成几个编了号的分区，一区一段往下读：
+//   01 总览        —— 四个读数（本周容量 / 最近一次 / 本周时长 / 平均每次）
+//   02 训练时长    —— 每天练了多久
+//   03 单个动作的进步 —— 最大重量 / 总容量 / 估算 1RM
+//   04 有氧        —— 本周时长 / 单次距离
+//   05 消耗热量（估算）
+//   06 身体数据    —— 体重 / 体脂 / 身高
+//
+// 【分区编号是自动数的，不要手写】
+// 有几个区是"有条件才出现"的（没记过有氧就没有 04）。
+// 编号由 index.css 里的 .sec / .sec-no 用 CSS 计数器按出现顺序数出来，
+// 中途少一块会自动跳过 —— 手写数字则会出现 01、02、04 这种看着像 bug 的断号。
 //
 // 【有一条设计原则，改的时候请守住】
 // 一张图只画一个指标，绝不在同一张图里放两个纵轴。
 // 比如"重量"和"容量"数值差了上百倍，硬画在一起，
 // 其中一条会被压成贴着底边的一条直线，什么也看不出来。
+//
+// 【颜色：这一页一律用青色，不用主色橙红】
+// 全站的分工是"橙=要你动手，青=已经记下来的数"（见 index.css 顶部）。
+// 统计页上全是已经记下来的数，一个要动手的地方都没有。
+// 唯一的例外是"每日消耗"那张 —— 它同时画力量和两组数据，
+// 光靠深浅分不开，所以那儿才动用第二条颜色（蓝）。
 // ============================================================
 
 // ============================================================
@@ -118,7 +131,7 @@ export function StatsScreen() {
   const [sessions] = useState<WorkoutSession[]>(readSessions)
   const [customExercises] = useState<Exercise[]>(readCustomExercises)
   const [bodyMetrics] = useState<BodyMetric[]>(readBodyMetrics)
-  // 当前主题下的图表配色，下面 C.brand 这种写法都来自它
+  // 当前主题下的图表配色，下面 C.cyan 这种写法都来自它
   const [C] = useState(chartColors)
 
   const allExercises = mergeExercises(customExercises)
@@ -246,15 +259,31 @@ export function StatsScreen() {
   const hasHeight = body.some((b) => b.height !== undefined)
 
   return (
-    <div>
+    // .sections 把下面那些分区编号的计数器归零。
+    // 编号是 CSS 自动按出现顺序数出来的（见 index.css 里 .sec 那段说明）——
+    // 所以中途少一块（比如没记过有氧）时编号会自动接着数，不会出现 01、02、04。
+    <div className="sections">
       <h1 className="mb-4 text-2xl font-bold">统计</h1>
 
-      {/* ---------- 1. 顶部两个大数字 ----------
-          两个都用 lifting（只含力量的那一份），所以数字里一点有氧都不掺。
+      {/* ---------- 1. 总览 ----------
+          四个数并成**一块**面板，中间用细线分成四格。
+          以前是四张各带圆角和投影的小卡，看着像四个不相干的小部件；
+          并成一块之后它们变成"同一张面板上的四个读数"。
 
-          "练了 N 次"数的是**全部**训练，包括只跑了步没撸铁的那些天 ——
+          【为什么是四个而不是分两排】
+          "1 小时 24 分"在大字号下有 8 个字符宽，塞进三分之一行会折成两行。
+          两列布局每格有半屏宽（约 160px），四个读数都放得下。
+
+          两个容量数用 lifting（只含力量的那一份），所以一点有氧都不掺。
+          "练了 N 次"数的却是**全部**训练，包括只跑了步没撸铁的那些天 ——
           跑了步也算练了一次，不该被漏掉。 */}
-      <div className="mb-3 flex gap-2">
+      <h2 className="sec">
+        <span className="sec-no t-index" aria-hidden="true" />
+        <span className="t-label">总览</span>
+        <span className="sec-rule" aria-hidden="true" />
+      </h2>
+
+      <div className="ledger stat-grid mb-2.5">
         <StatTile
           label="本周总容量"
           value={thisWeekVolume(lifting).toLocaleString()}
@@ -269,13 +298,6 @@ export function StatsScreen() {
               : 'kg · 还没有力量记录'
           }
         />
-      </div>
-
-      {/* ---------- 时长那两个数字（★ 2026-09-24 加的）----------
-          ★ 为什么另起一行，而不是塞进上面那一排当第三个：
-          "1 小时 24 分"在大字号下有 8 个字符宽，挤在三分之一行里会折成两行，
-          把那一排撑得高低不齐。**实测过才这么定的**，不是凭感觉。 */}
-      <div className="mb-3 flex gap-2">
         <StatTile
           label="本周练了多久"
           value={formatDuration(weekDurationSec)}
@@ -341,7 +363,14 @@ export function StatsScreen() {
                 ]}
                 labelFormatter={(label) => `${String(label)} 那一周`}
               />
-              <Bar dataKey="volume" fill={C.brand} radius={[4, 4, 0, 0]} />
+              {/* 【柱子为什么是青色，不是主色橙红】
+                  全站的颜色分工是"橙=要你动手，青=已经记下来的数"
+                  （见 index.css 顶部那段）。统计页上全是已经记下来的数，
+                  一个要动手的地方都没有 —— 所以用青。
+                  一张统计页如果满屏橙柱子，等你回到训练页，
+                  那颗该跳出来的 ✓ 就淹在同一个颜色里了。
+                  强调色一滥，就等于没有强调色。 */}
+              <Bar dataKey="volume" fill={C.cyan} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -352,9 +381,10 @@ export function StatsScreen() {
           一张空图配上一条 0 到 1 的刻度，看着就像 App 坏了。 */}
       {durationPoints.length > 0 && (
         <>
-          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+          <h2 className="sec">
+            <span className="sec-no t-index" aria-hidden="true" />
             <span className="t-label">训练时长</span>
-            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+            <span className="sec-rule" aria-hidden="true" />
           </h2>
           <ProgressChart
             points={durationPoints}
@@ -363,7 +393,7 @@ export function StatsScreen() {
             subtitle="按天合并：一天练两次算那天的总时长。含组间休息。"
             unit="分钟"
             columnLabel="时长"
-            color={C.brand}
+            color={C.cyan}
             // 按天合并之后，光看分钟数看不出那天是一次还是两次 ——
             // 多给一列把这个说清楚
             extraLabel="那天练了几次"
@@ -377,9 +407,10 @@ export function StatsScreen() {
           显示一个没有选项的下拉框只会让人以为坏了。 */}
       {usedExercises.length > 0 && (
         <>
-          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+          <h2 className="sec">
+            <span className="sec-no t-index" aria-hidden="true" />
             <span className="t-label">单个动作的进步</span>
-            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+            <span className="sec-rule" aria-hidden="true" />
           </h2>
 
           <select
@@ -407,8 +438,13 @@ export function StatsScreen() {
                 subtitle={`${selectedName} · 每次练到的最重那一下（kg）`}
                 unit="kg"
                 columnLabel="最大重量"
-                color={C.brand}
+                color={C.cyan}
               />
+              {/* 【两张图为什么用同一个颜色】
+                  它们画的是同一个动作的两个不同指标，而且**从来不同时出现**
+                  （一张一张往下排）。同样的数据用两个颜色，
+                  读的人会去找"这两个颜色是什么意思"—— 而答案是"没意思"。
+                  颜色有含义的时候才用颜色，没含义就统一。 */}
               <ProgressChart
                 points={points}
                 dataKey="volume"
@@ -416,7 +452,7 @@ export function StatsScreen() {
                 subtitle={`${selectedName} · 每次练的总量（kg）`}
                 unit="kg"
                 columnLabel="总容量"
-                color={C.chart2}
+                color={C.cyan}
                 startFromZero
               />
               {/* ---------- 估算 1RM ----------
@@ -424,7 +460,7 @@ export function StatsScreen() {
                   "每次训练做了什么"，这条画的是"最近大概能举多少" ——
                   算法在 oneRmSeries 里，多一条 PR 线和上面那个大数字。 */}
               {oneRmPoints.length > 0 && (
-                <div className="mb-3 flex gap-2">
+                <div className="ledger stat-grid mb-2.5">
                   <StatTile
                     label="当前估算 1RM"
                     value={`${oneRmPoints[oneRmPoints.length - 1].oneRm} kg`}
@@ -440,7 +476,7 @@ export function StatsScreen() {
                   <OneRmChart points={oneRmPoints} name={selectedName} />
                   {/* 这段说明不是客套话。不知道口径的人会把它当成
                       "我当天最好的成绩"，然后觉得数字偏低。 */}
-                  <p className="mt-1 card p-3 text-xs text-muted">
+                  <p className="ledger mt-2.5 p-3.5 text-xs leading-relaxed text-muted">
                     曲线画的是"截至那天，往前 90 天里最好的水平"，
                     不是当天最好那一组 —— 所以它反映的是能力的变化，
                     不会因为今天练法不同就上下跳。
@@ -452,7 +488,7 @@ export function StatsScreen() {
                   </p>
                 </>
               ) : (
-                <p className="card p-3 text-center text-sm text-muted">
+                <p className="ledger p-3.5 text-center text-sm text-muted">
                   再练几次就能看到趋势
                   {oneRmPoints.length === 0 && (
                     <>
@@ -476,12 +512,13 @@ export function StatsScreen() {
           一个指标"的由来）。 */}
       {(cardioSec > 0 || cardioPoints.length > 0) && (
         <>
-          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+          <h2 className="sec">
+            <span className="sec-no t-index" aria-hidden="true" />
             <span className="t-label">有氧</span>
-            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+            <span className="sec-rule" aria-hidden="true" />
           </h2>
 
-          <div className="mb-3 flex gap-2">
+          <div className="ledger stat-grid mb-2.5">
             <StatTile
               label="本周有氧"
               value={formatDuration(cardioSec)}
@@ -497,7 +534,7 @@ export function StatsScreen() {
               subtitle="每次有氧的距离（公里）。没填距离的那些次不会画上来。"
               unit="公里"
               columnLabel="距离"
-              color={C.chart2}
+              color={C.cyan}
               startFromZero
             />
           )}
@@ -509,11 +546,12 @@ export function StatsScreen() {
           显示一堆 0 或者"—"只会让人以为是坏的。 */}
       {weightKg === undefined ? (
         <>
-          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+          <h2 className="sec">
+            <span className="sec-no t-index" aria-hidden="true" />
             <span className="t-label">消耗热量（估算）</span>
-            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+            <span className="sec-rule" aria-hidden="true" />
           </h2>
-          <p className="card p-3 text-sm text-muted">
+          <p className="ledger p-3.5 text-sm leading-relaxed text-muted">
             填个体重就能看到热量统计。
             <br />
             去「设置 → 默认体重」填一个，或者在「设置 → 身体数据」里记一次
@@ -522,12 +560,13 @@ export function StatsScreen() {
         </>
       ) : (
         <>
-          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+          <h2 className="sec">
+            <span className="sec-no t-index" aria-hidden="true" />
             <span className="t-label">消耗热量（估算）</span>
-            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+            <span className="sec-rule" aria-hidden="true" />
           </h2>
 
-          <div className="mb-3 flex gap-2">
+          <div className="ledger stat-grid mb-2.5">
             {/* 拆分那两个数也先过 roundKcal，否则会出现
                 "总共约 520，其中力量 188、有氧 330" 这种前后对不上 */}
             <StatTile
@@ -555,7 +594,7 @@ export function StatsScreen() {
           </button>
 
           {showFormula && (
-            <div className="mb-3 card p-3 text-xs text-muted">
+            <div className="ledger mb-2.5 p-3.5 text-xs leading-relaxed text-muted">
               <div className="text-ink-2">用到的数据</div>
               <div className="mt-0.5">
                 体重 {weightKg} kg（
@@ -646,10 +685,13 @@ export function StatsScreen() {
                   ]}
                   labelFormatter={(label) => `${String(label)} 那一天`}
                 />
+                {/* 这一张是全站唯一画**两组**数据的地方 ——
+                    力量和有氧的算法完全不同，必须分开画，
+                    所以这里真的需要两个色相（青 + 蓝）。 */}
                 <Bar
                   dataKey="strength"
                   name="力量"
-                  fill={C.brand}
+                  fill={C.cyan}
                   radius={[4, 4, 0, 0]}
                 />
                 <Bar
@@ -665,7 +707,7 @@ export function StatsScreen() {
           {/* 这段说明不是客套话，是这个功能的一部分。
               热量是估的，界面上必须说清楚 —— 不写的话，
               主人拿它跟手环一对数字发现差很多，会以为是算错了。 */}
-          <p className="mt-1 card p-3 text-xs text-muted">
+          <p className="ledger mt-2.5 p-3.5 text-xs leading-relaxed text-muted">
             这是估算值，不含运动后持续燃烧的部分。
             <br />
             算法是（MET − 1）× 体重 × 时长，减掉 1 是为了刨去"躺着也要烧"
@@ -680,9 +722,10 @@ export function StatsScreen() {
       {/* ---------- 6. 身体数据 ---------- */}
       {(hasWeight || hasFat || hasHeight) && (
         <>
-          <h2 className="mb-2.5 mt-6 flex items-center gap-3">
+          <h2 className="sec">
+            <span className="sec-no t-index" aria-hidden="true" />
             <span className="t-label">身体数据</span>
-            <span className="h-px flex-1 bg-line" aria-hidden="true" />
+            <span className="sec-rule" aria-hidden="true" />
           </h2>
 
           {hasWeight && (
@@ -1026,7 +1069,7 @@ function OneRmChart({
             type="monotone"
             dataKey="oneRm"
             name="最近水平"
-            stroke={C.chart3}
+            stroke={C.cyan}
             strokeWidth={2}
             dot={{ r: 3 }}
           />
@@ -1108,7 +1151,7 @@ function BodyTrendChart({
           <Line
             type="monotone"
             dataKey="value"
-            stroke={C.brand}
+            stroke={C.cyan}
             strokeWidth={2}
             dot={{ r: 3 }}
           />

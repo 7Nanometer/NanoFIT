@@ -113,11 +113,19 @@ export function chartColors() {
   // 的故障最难查。所以下面这几个值要和 index.css 的夜间那套保持一致。
   return {
     brand: read('--color-brand', '#ff4d2e'),
+    // 【为什么图表要单独拿一份 cyan】
+    // 全站的颜色分工是"橙=要你动手，青=已经记下来的数"（见 index.css 顶部）。
+    // 统计页上全是"已经记下来的数" —— 一个要动手的地方都没有。
+    // 所以图表该用青色，橙色留给真正需要你点的地方（那颗 ✓、当前 tab）。
+    // 一张统计页如果满屏橙柱子，等你回到训练页，那颗该跳出来的 ✓
+    // 就淹在同一个颜色里了 —— 强调色一滥，就等于没有强调色。
+    cyan: read('--color-cyan', '#3fe0d0'),
     muted: read('--color-muted', '#74746e'),
     line: read('--color-line', '#23232a'),
     surface: read('--color-surface', '#17171b'),
     ink: read('--color-ink', '#f7f7f5'),
+    // chart2 只用在"一张图上要同时画两组数据"的地方（比如力量 vs 有氧）——
+    // 那时候光靠深浅分不开，必须有第二个色相。
     chart2: read('--color-chart-2', '#4da3ff'),
-    chart3: read('--color-chart-3', '#5fd38a'),
   }
 }
