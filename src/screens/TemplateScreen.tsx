@@ -101,106 +101,111 @@ export function TemplateScreen({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* ---------- 模板列表 ---------- */}
-      {templates.map((template) => {
-        const isPreset = template.id.startsWith('preset-')
-        const expanded = expandedId === template.id
-        return (
-          <div
-            key={template.id}
-            className="mb-2 card"
-          >
-            <button
-              type="button"
-              onClick={() => setExpandedId(expanded ? null : template.id)}
-              className="press w-full p-3.5 text-left"
-            >
-              <div className="flex items-center gap-2">
-                <span className="flex-1 truncate text-lg font-semibold text-ink">
-                  {template.name}
-                </span>
-                {isPreset && (
-                  // 做成小胶囊而不是一行灰字：它是个"标签"，
-                  // 标签就该有个边界，不然会跟旁边的文字糊成一句
-                  <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-muted">
-                    预置
+      {/* ---------- 模板列表 ----------
+          和一整页别的列表一样，从"一叠卡片"改成"一本账"：
+          行与行之间一条细线，展开的内容嵌在同一格里（底下垫一层深色）。
+          三个模板 + 展开内容现在能一屏看完，不用像以前那样翻半屏空白。 */}
+      <div className="ledger divide-y divide-line">
+        {templates.map((template) => {
+          const isPreset = template.id.startsWith('preset-')
+          const expanded = expandedId === template.id
+          return (
+            <div key={template.id}>
+              <button
+                type="button"
+                onClick={() => setExpandedId(expanded ? null : template.id)}
+                className="press w-full px-3.5 py-3 text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 truncate text-base font-semibold text-ink">
+                    {template.name}
                   </span>
-                )}
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ease-mech ${
-                    expanded ? 'rotate-180' : ''
-                  }`}
-                >
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </div>
-              {/* 【为什么要把动作名勾出来】
-                  以前收起时这行只有"5 个动作" —— 于是"推日""拉日""腿日"
-                  三张卡片长得一模一样，必须点开才知道哪个是哪个。
-                  把动作名当预览文字铺在这儿，不用点开就能认出来。 */}
-              <div className="mt-1 flex items-center gap-1.5 text-xs">
-                <span className="t-num shrink-0 font-medium text-ink-2">
-                  {template.items.length} 个动作
-                </span>
-                <span className="shrink-0 text-muted">·</span>
-                <span className="truncate text-muted">
-                  {template.items
-                    .map((item) => exerciseName(allExercises, item.exerciseId))
-                    .join('、')}
-                </span>
-              </div>
-            </button>
-
-            {expanded && (
-              <div className="border-t border-line p-3">
-                {template.items.map((item) => (
-                  <div
-                    key={item.exerciseId}
-                    className="flex items-center gap-2 py-0.5 text-sm"
+                  {isPreset && (
+                    // 做成小标签而不是一行灰字：它是个"标签"，
+                    // 标签就该有个边界，不然会跟旁边的文字糊成一句。
+                    // 用描边而不是上底色 —— 它只是标一下来源，不是按钮。
+                    <span className="shrink-0 rounded border border-line-2 px-1.5 py-0.5 text-xs text-muted">
+                      预置
+                    </span>
+                  )}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ease-mech ${
+                      expanded ? 'rotate-180' : ''
+                    }`}
                   >
-                    <span className="flex-1 text-ink">
-                      {exerciseName(allExercises, item.exerciseId)}
-                    </span>
-                    <span className="shrink-0 text-muted">
-                      {item.targetSets} 组 × {item.targetReps} 次
-                    </span>
-                  </div>
-                ))}
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+                {/* 【为什么要把动作名勾出来】
+                    以前收起时这行只有"5 个动作" —— 于是"推日""拉日""腿日"
+                    三张卡片长得一模一样，必须点开才知道哪个是哪个。
+                    把动作名当预览文字铺在这儿，不用点开就能认出来。 */}
+                <div className="mt-1 flex items-center gap-1.5 text-xs">
+                  <span className="t-num shrink-0 font-medium text-ink-2">
+                    {template.items.length} 个动作
+                  </span>
+                  <span className="shrink-0 text-muted">·</span>
+                  <span className="truncate text-muted">
+                    {template.items
+                      .map((item) => exerciseName(allExercises, item.exerciseId))
+                      .join('、')}
+                  </span>
+                </div>
+              </button>
 
-                {isPreset ? (
-                  <p className="mt-3 text-xs text-muted">
-                    预置模板不能改。想改的话点右上角"+ 新建"做一个自己的。
-                  </p>
-                ) : (
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(template)}
-                      className="press min-h-11 flex-1 rounded-lg border border-line-2 text-sm text-ink-2"
+              {expanded && (
+                <div className="border-t border-line bg-surface-2 px-3.5 py-3">
+                  {template.items.map((item) => (
+                    <div
+                      key={item.exerciseId}
+                      // 目标"几组几次"靠右对齐 ——
+                      // 一列数字的右边缘落在同一条竖线上，几组几次一眼能比
+                      className="flex items-baseline gap-2 py-1"
                     >
-                      编辑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteTemplate(template.id)}
-                      className="press min-h-11 flex-1 rounded-lg border border-line-2 text-sm text-muted"
-                    >
-                      删除
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )
-      })}
+                      <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                        {exerciseName(allExercises, item.exerciseId)}
+                      </span>
+                      <span className="t-num shrink-0 text-xs text-muted">
+                        {item.targetSets} 组 × {item.targetReps} 次
+                      </span>
+                    </div>
+                  ))}
+
+                  {isPreset ? (
+                    <p className="mt-3 text-xs text-muted">
+                      预置模板不能改。想改的话点右上角"+ 新建"做一个自己的。
+                    </p>
+                  ) : (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(template)}
+                        className="press min-h-11 flex-1 rounded-lg border border-line-2 text-sm text-ink-2"
+                      >
+                        编辑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteTemplate(template.id)}
+                        className="press min-h-11 flex-1 rounded-lg border border-line-2 text-sm text-muted"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -277,37 +282,41 @@ function TemplateEditor({
         className="mb-4 w-full rounded-lg border border-line-2 bg-surface-2 px-3 py-2.5 text-ink outline-none transition duration-150 ease-mech focus:border-brand focus:ring-2 focus:ring-brand/25"
       />
 
-      {items.map((item, index) => (
-        <div
-          key={item.exerciseId}
-          className="mb-2 card p-3"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <span className="flex-1 font-medium text-ink">
-              {exerciseName(allExercises, item.exerciseId)}
-            </span>
-            <button
-              type="button"
-              onClick={() => setItems(items.filter((_, i) => i !== index))}
-              className="shrink-0 px-2 py-1 text-xs text-muted"
-            >
-              移除
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            <Stepper
-              label="组数"
-              value={item.targetSets}
-              onChange={(v) => updateItem(index, { targetSets: v })}
-            />
-            <Stepper
-              label="每组次数"
-              value={item.targetReps}
-              onChange={(v) => updateItem(index, { targetReps: v })}
-            />
-          </div>
+      {/* 编辑器里的动作清单也用账本写法：一张卡换成一行，
+          一行里就是"动作名 + 移除"、下面跟着两个加减器。
+          三个动作时省下的高度就够"添加动作"那颗按钮不被挤出屏幕。 */}
+      {items.length > 0 && (
+        <div className="ledger mb-2.5 divide-y divide-line">
+          {items.map((item, index) => (
+            <div key={item.exerciseId} className="px-3 py-2.5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                  {exerciseName(allExercises, item.exerciseId)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setItems(items.filter((_, i) => i !== index))}
+                  className="press -mr-1 shrink-0 rounded-lg px-2 py-1 text-xs text-muted"
+                >
+                  移除
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                <Stepper
+                  label="组数"
+                  value={item.targetSets}
+                  onChange={(v) => updateItem(index, { targetSets: v })}
+                />
+                <Stepper
+                  label="每组次数"
+                  value={item.targetReps}
+                  onChange={(v) => updateItem(index, { targetReps: v })}
+                />
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
 
       <button
         type="button"

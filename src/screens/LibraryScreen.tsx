@@ -180,38 +180,51 @@ export function LibraryScreen({ onBack }: { onBack: () => void }) {
           `（预置 ${PRESET_EXERCISES.length} 个 + 自建 ${custom.length} 个）`}
       </p>
 
-      {/* ---------- 动作列表 ---------- */}
-      {list.map((item) => {
-        const expanded = expandedId === item.id
-        return (
-          <button
-            key={item.id}
-            type="button"
-            // 再点一次就收起来
-            onClick={() => setExpandedId(expanded ? null : item.id)}
-            className="press mb-2 w-full card p-3 text-left"
-          >
-            <div className="flex items-center gap-2">
-              <span className="truncate text-base font-semibold text-ink">{item.name}</span>
-              {item.isCustom && (
-                <span className="rounded bg-brand/20 px-1.5 py-0.5 text-xs text-brand">
-                  自建
-                </span>
-              )}
-            </div>
-            <div className="mt-1 text-sm text-muted">
-              {MUSCLE_LABELS[item.muscleGroup]}
-              {/* 器械留空时就不显示"·"，免得出现一个孤零零的圆点 */}
-              {item.equipment !== '' && ` · ${item.equipment}`}
-            </div>
-            {expanded && item.note && (
-              <p className="mt-2 border-t border-line pt-2 text-sm text-ink-2">
-                {item.note}
-              </p>
-            )}
-          </button>
-        )
-      })}
+      {/* ---------- 动作列表 ----------
+          改成一整块账本（行与行之间细线分开），不再是"一张一张卡片"。
+          这一页有一百六十多项，卡片写法每项要 100 像素、还要空 8 像素，
+          翻起来没完；账本写法每项约 58 像素，省掉四成高度。
+          动作库是"查一下"的地方，一次能看到多少个名字，比每个名字多好看重要得多。 */}
+      {list.length > 0 && (
+        <div className="ledger divide-y divide-line">
+          {list.map((item) => {
+            const expanded = expandedId === item.id
+            return (
+              <button
+                key={item.id}
+                type="button"
+                // 再点一次就收起来
+                onClick={() => setExpandedId(expanded ? null : item.id)}
+                className="press w-full px-3.5 py-2.5 text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-base font-semibold text-ink">
+                    {item.name}
+                  </span>
+                  {/* 「自建」标签改成只有一圈描边、不上底色 ——
+                      它是"标一下来源"，不是一个要点的东西。
+                      原来那版透着橙底，在一列名字里格外扎眼。 */}
+                  {item.isCustom && (
+                    <span className="shrink-0 rounded border border-brand/40 px-1.5 py-0.5 text-xs text-brand">
+                      自建
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 text-xs text-muted">
+                  {MUSCLE_LABELS[item.muscleGroup]}
+                  {/* 器械留空时就不显示"·"，免得出现一个孤零零的圆点 */}
+                  {item.equipment !== '' && ` · ${item.equipment}`}
+                </div>
+                {expanded && item.note && (
+                  <p className="mt-2 border-t border-line pt-2 text-xs leading-relaxed text-ink-2">
+                    {item.note}
+                  </p>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* ---------- 什么都没搜到 ---------- */}
       {list.length === 0 && (
@@ -234,6 +247,13 @@ export function LibraryScreen({ onBack }: { onBack: () => void }) {
 }
 
 // 筛选条上的一个小圆角按钮。单独写出来是为了不用把同样的样式抄 7 遍。
+//
+// 【选中的那一个为什么不是"一整块橙"】
+// 这一页有两条筛选条、十几个这样的按钮。原版选中的是一块实心橙红，
+// 于是屏幕上会同时出现两块亮橙 —— 而且是这一页最响的东西。
+// 它们只是"筛选用的小开关"，不该比下面那一百多个动作还抢眼。
+// 改成"淡橙底 + 橙字 + 橙边"：一眼仍看得出选的是哪个，但不吵。
+// （和设置页里「外观」那两个按钮、休息秒数那一排，用的是同一套。）
 function FilterChip({
   label,
   active,
@@ -247,9 +267,9 @@ function FilterChip({
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-11 shrink-0 rounded-full border px-4 text-sm ${
+      className={`press min-h-11 shrink-0 rounded-full border px-4 text-sm ${
         active
-          ? 'border-brand bg-brand font-semibold text-on-brand'
+          ? 'border-brand bg-brand/10 font-semibold text-brand'
           : 'border-line-2 text-ink-2'
       }`}
     >

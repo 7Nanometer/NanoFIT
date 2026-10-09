@@ -223,24 +223,40 @@ export function SettingsScreen() {
         </div>
       )}
 
-      <div className="space-y-2">
+      {/* 【这一页为什么从"一叠卡片"改成了"一本账"】
+          以前每一项都是一张独立卡片（各带圆角、投影，之间还空 8px），
+          七项加起来有 700 多像素 —— 在一屏只能放 800 多像素的手机上，
+          光设置列表就要滑一屏半，而每一项只有"一个名字 + 一句说明"。
+          改成账本之后：一块大的、行与行之间一条细线、行高砍掉近一半。
+          同样的七项现在一屏基本能看完，而且"这是一份列表"的意思更清楚。
+
+        divide-y = "给除了第一个以外每个孩子加一条上边线"，
+        就是账本一行行画下去的画法。 */}
+      <div className="ledger">
+        <div className="divide-y divide-line">
         {/* ---------- 外观：日间 / 夜间 ---------- */}
-        <div className="card p-4">
-          <div className="text-lg font-semibold text-ink">外观</div>
-          <p className="mt-0.5 text-sm text-muted">
+        <div className="px-3.5 py-3">
+          <div className="text-base font-semibold text-ink">外观</div>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">
             日间是白底，夜间是深色。点一下立刻换，也记得住。
           </p>
-          <div className="mt-3.5 flex gap-2">
+          <div className="mt-3 flex gap-2">
             {THEMES.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => changeTheme(t.key)}
+                // 【选中的那一个为什么不再是"一整块橙"】
+                // 它原来是一块实心橙红，是整页最响的东西 ——
+                // 可设置页的正事是"从这些行里挑一个点进去"，
+                // 眼睛不该先被一个偏好开关拽走。
+                // 改成"淡橙底 + 橙字 + 橙边"：一眼仍看得出选的是哪个，
+                // 但不再压过下面那些真正要点的行。
                 className={`press min-h-11 flex-1 rounded-lg border text-sm ${
                   // 没选过（undefined）就是夜间 —— 和 index.css 的默认值、
                   // 以及 index.html 里那段防闪白光的脚本保持一致
                   (settings.theme ?? 'dark') === t.key
-                    ? 'border-brand bg-brand font-semibold text-on-brand'
+                    ? 'border-brand bg-brand/10 font-semibold text-brand'
                     : 'border-line-2 text-ink-2'
                 }`}
               >
@@ -257,162 +273,174 @@ export function SettingsScreen() {
           hint={`${PRESET_EXERCISES.length} 个预置动作 + 自建`}
           onClick={() => setSub('library')}
         />
-        {/* 休息计时器：点一下展开秒数选项 */}
-        <SettingRow
-          label="休息计时器"
-          hint={`组间休息 ${settings.restSec} 秒`}
-          onClick={() => setRestPickerOpen(!restPickerOpen)}
-        />
-        {restPickerOpen && (
-          <div className="flex flex-wrap gap-2 card p-3">
-            {[30, 45, 60, 90, 120, 150, 180].map((sec) => (
-              <button
-                key={sec}
-                type="button"
-                onClick={() => {
-                  saveSettings({ ...settings, restSec: sec })
-                  setRestPickerOpen(false)
-                }}
-                className={`min-h-11 rounded-lg border px-3 text-sm ${
-                  settings.restSec === sec
-                    ? 'border-brand bg-brand font-semibold text-on-brand'
-                    : 'border-line-2 text-ink-2'
-                }`}
-              >
-                {sec} 秒
-              </button>
-            ))}
-          </div>
-        )}
+        {/* 休息计时器：点一下展开秒数选项。
+            【为什么行和展开的面板要包在同一个 div 里】
+            divide-y 只对"直接的孩子"画线。包在一起之后，
+            这一行和它展开出来的面板算作同一格，中间不会多出一条线；
+            面板自己用 border-t 画线把自己和上面那行分开。 */}
+        <div>
+          <SettingRow
+            label="休息计时器"
+            hint={`组间休息 ${settings.restSec} 秒`}
+            onClick={() => setRestPickerOpen(!restPickerOpen)}
+          />
+          {restPickerOpen && (
+            <div className="flex flex-wrap gap-2 border-t border-line bg-surface-2 px-3.5 py-3">
+              {[30, 45, 60, 90, 120, 150, 180].map((sec) => (
+                <button
+                  key={sec}
+                  type="button"
+                  onClick={() => {
+                    saveSettings({ ...settings, restSec: sec })
+                    setRestPickerOpen(false)
+                  }}
+                  // 和上面「外观」那两个按钮用同一套选中样式（淡橙底 + 橙字 + 橙边），
+                  // 两个地方的选择长得一样，才不用各学一遍
+                  className={`press min-h-11 rounded-lg border px-3 text-sm ${
+                    settings.restSec === sec
+                      ? 'border-brand bg-brand/10 font-semibold text-brand'
+                      : 'border-line-2 text-ink-2'
+                  }`}
+                >
+                  {sec} 秒
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* 后台提醒：切到别的 App 也能响（2026-09-24 加的）。
             它和上面那个「休息计时器」是一对：一个管休息多久，一个管到点怎么叫醒你。 */}
-        <SettingRow
-          label="后台提醒"
-          hint={
-            !notifyStatus.native
-              ? '只在手机 App 里生效'
-              : !notifyStatus.granted
-                ? '未开启 · 切到别的 App 就不会提醒你'
-                : notifyStatus.exact
-                  ? '已开启 · 锁屏、切 App 都会提醒'
-                  : '已开启 · 可能晚几秒'
-          }
-          onClick={() => setNotifyOpen(!notifyOpen)}
-        />
-        {notifyOpen && (
-          <div className="space-y-3 card p-4">
-            {!notifyStatus.native ? (
-              <p className="text-xs text-muted">
-                「后台提醒」是把"到点叫我"这件事交给手机系统去办，
-                所以只有装在手机上的 App 才有这个能力，网页版做不到。
-              </p>
-            ) : (
-              <>
+        <div>
+          <SettingRow
+            label="后台提醒"
+            hint={
+              !notifyStatus.native
+                ? '只在手机 App 里生效'
+                : !notifyStatus.granted
+                  ? '未开启 · 切到别的 App 就不会提醒你'
+                  : notifyStatus.exact
+                    ? '已开启 · 锁屏、切 App 都会提醒'
+                    : '已开启 · 可能晚几秒'
+            }
+            onClick={() => setNotifyOpen(!notifyOpen)}
+          />
+          {notifyOpen && (
+            <div className="space-y-3 border-t border-line bg-surface-2 px-3.5 py-3">
+              {!notifyStatus.native ? (
                 <p className="text-xs text-muted">
-                  组间休息到点时，就算你切到别的 App 或者锁了屏，手机也会响。
-                  原理是把这条提醒交给手机系统预约，而不是让 App 自己掐着表等 ——
-                  App 切到后台后，自己掐的表就不走了。
+                  「后台提醒」是把"到点叫我"这件事交给手机系统去办，
+                  所以只有装在手机上的 App 才有这个能力，网页版做不到。
                 </p>
+              ) : (
+                <>
+                  <p className="text-xs text-muted">
+                    组间休息到点时，就算你切到别的 App 或者锁了屏，手机也会响。
+                    原理是把这条提醒交给手机系统预约，而不是让 App 自己掐着表等 ——
+                    App 切到后台后，自己掐的表就不走了。
+                  </p>
 
-                <NotifyLine
-                  label="通知权限"
-                  ok={notifyStatus.granted}
-                  okText="已开启"
-                  badText="未开启，切到后台就不会提醒你"
-                  actionLabel="去开启"
-                  onAction={() => void enableNotify()}
-                />
+                  <NotifyLine
+                    label="通知权限"
+                    ok={notifyStatus.granted}
+                    okText="已开启"
+                    badText="未开启，切到后台就不会提醒你"
+                    actionLabel="去开启"
+                    onAction={() => void enableNotify()}
+                  />
 
-                <NotifyLine
-                  label="精确闹钟"
-                  ok={notifyStatus.exact}
-                  okText="已授权 · 到点准响"
-                  badText="未授权 · 可能晚几秒到几十秒"
-                  actionLabel="去设置"
-                  onAction={() => void openExactAlarmSetting()}
-                />
+                  <NotifyLine
+                    label="精确闹钟"
+                    ok={notifyStatus.exact}
+                    okText="已授权 · 到点准响"
+                    badText="未授权 · 可能晚几秒到几十秒"
+                    actionLabel="去设置"
+                    onAction={() => void openExactAlarmSetting()}
+                  />
 
-                {/* 电池优化引导。这一段是【文字说明】，不跳转 ——
-                    国内各家的设置页路径又乱又常改，跳过去也不一定落在对的地方，
-                    写清楚让你自己点反而更靠谱。 */}
-                <div className="rounded-lg border border-line-2 p-3">
-                  <div className="text-sm font-medium text-ink">
-                    小米 / 华为 / OPPO / vivo 看这里
+                  {/* 电池优化引导。这一段是【文字说明】，不跳转 ——
+                      国内各家的设置页路径又乱又常改，跳过去也不一定落在对的地方，
+                      写清楚让你自己点反而更靠谱。 */}
+                  <div className="rounded-lg border border-line-2 p-3">
+                    <div className="text-sm font-medium text-ink">
+                      小米 / 华为 / OPPO / vivo 看这里
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      这几家的系统为了省电，会把后台 App 的提醒延迟、甚至直接吞掉。
+                      如果发现「有时响有时不响」，去把本应用加进省电白名单：
+                    </p>
+                    <ul className="mt-2 space-y-1 text-xs text-muted">
+                      <li>· 小米：设置 → 应用设置 → 应用管理 → NanoFIT → 省电策略 → 选「无限制」，再把「自启动」打开</li>
+                      <li>· 华为：设置 → 应用 → 应用启动管理 → NanoFIT → 关掉「自动管理」，三个开关全打开</li>
+                      <li>· OPPO：设置 → 电池 → 应用耗电管理 → NanoFIT → 允许「完全后台行为」</li>
+                      <li>· vivo：设置 → 电池 → 后台耗电管理 → NanoFIT → 允许「后台高耗电」</li>
+                      <li>· 原生安卓：设置 → 应用 → NanoFIT → 电池 → 选「不受限制」</li>
+                    </ul>
+                    <p className="mt-1 text-xs text-muted">
+                      （系统版本不同，菜单名字会有点出入。）
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-muted">
-                    这几家的系统为了省电，会把后台 App 的提醒延迟、甚至直接吞掉。
-                    如果发现「有时响有时不响」，去把本应用加进省电白名单：
-                  </p>
-                  <ul className="mt-2 space-y-1 text-xs text-muted">
-                    <li>· 小米：设置 → 应用设置 → 应用管理 → NanoFIT → 省电策略 → 选「无限制」，再把「自启动」打开</li>
-                    <li>· 华为：设置 → 应用 → 应用启动管理 → NanoFIT → 关掉「自动管理」，三个开关全打开</li>
-                    <li>· OPPO：设置 → 电池 → 应用耗电管理 → NanoFIT → 允许「完全后台行为」</li>
-                    <li>· vivo：设置 → 电池 → 后台耗电管理 → NanoFIT → 允许「后台高耗电」</li>
-                    <li>· 原生安卓：设置 → 应用 → NanoFIT → 电池 → 选「不受限制」</li>
-                  </ul>
-                  <p className="mt-1 text-xs text-muted">
-                    （系统版本不同，菜单名字会有点出入。）
-                  </p>
-                </div>
 
-                {/* 试一下：不用真练一组，5 秒后就能看到效果。
-                    权限、声音、震动、横幅、点一下能不能回到 App，全都能试出来。 */}
-                <button
-                  type="button"
-                  onClick={() => void runTest()}
-                  className="press min-h-11 w-full rounded-lg border border-line-2 px-4 text-sm text-ink-2"
-                >
-                  试一下：5 秒后提醒我
-                </button>
-                {testResult !== null && (
-                  <p className="text-xs text-muted">{testResult}</p>
-                )}
-              </>
-            )}
-          </div>
-        )}
+                  {/* 试一下：不用真练一组，5 秒后就能看到效果。
+                      权限、声音、震动、横幅、点一下能不能回到 App，全都能试出来。 */}
+                  <button
+                    type="button"
+                    onClick={() => void runTest()}
+                    className="press min-h-11 w-full rounded-lg border border-line-2 px-4 text-sm text-ink-2"
+                  >
+                    试一下：5 秒后提醒我
+                  </button>
+                    {testResult !== null && (
+                    <p className="text-xs text-muted">{testResult}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* 默认体重：没在「身体数据」里记过体重时，算热量用它兜底。
             hint 里那句"填个体重就能看到热量统计"是这个功能的入口 ——
             没填过的时候统计页那一节是空的，主人得知道去哪补。 */}
-        <SettingRow
-          label="默认体重"
-          hint={
-            settings.defaultWeightKg !== undefined
-              ? `${settings.defaultWeightKg} kg · 没记过体重时用它算热量`
-              : '填个体重就能看到热量统计'
-          }
-          onClick={() => setWeightPickerOpen(!weightPickerOpen)}
-        />
-        {weightPickerOpen && (
-          <div className="card p-3">
-            <p className="mb-2 text-xs text-muted">
-              算热量估算用的。在「身体数据」里记过体重的话以那个为准，
-              这里只是"从没记过"时的兜底。
-            </p>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <NumberField
-                  value={weightText}
-                  onChange={setWeightText}
-                  placeholder="75"
-                />
+        <div>
+          <SettingRow
+            label="默认体重"
+            hint={
+              settings.defaultWeightKg !== undefined
+                ? `${settings.defaultWeightKg} kg · 没记过体重时用它算热量`
+                : '填个体重就能看到热量统计'
+            }
+            onClick={() => setWeightPickerOpen(!weightPickerOpen)}
+          />
+          {weightPickerOpen && (
+            <div className="border-t border-line bg-surface-2 px-3.5 py-3">
+              <p className="mb-2 text-xs leading-relaxed text-muted">
+                算热量估算用的。在「身体数据」里记过体重的话以那个为准，
+                这里只是"从没记过"时的兜底。
+              </p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <NumberField
+                    value={weightText}
+                    onChange={setWeightText}
+                    placeholder="75"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={saveDefaultWeight}
+                  disabled={!weightValid}
+                  className="press min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
+                >
+                  保存
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={saveDefaultWeight}
-                disabled={!weightValid}
-                className="press min-h-11 shrink-0 rounded-lg bg-brand px-5 text-sm font-semibold text-on-brand shadow-[var(--elev-brand)] disabled:bg-line disabled:text-muted disabled:shadow-none"
-              >
-                保存
-              </button>
+              <p className="mt-2 text-xs text-muted">
+                单位 kg，合理范围 20–300。清空再保存 = 取消这个设置。
+              </p>
             </div>
-            <p className="mt-2 text-xs text-muted">
-              单位 kg，合理范围 20–300。清空再保存 = 取消这个设置。
-            </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* 记录 RPE 的开关 */}
         <button
@@ -425,12 +453,18 @@ export function SettingsScreen() {
           // "这其实是个开关，而且现在是开着的"。这两条属性就是补这个的。
           role="switch"
           aria-checked={settings.rpeEnabled}
-          className="card press flex w-full items-center gap-3 p-4 text-left"
+          className="press flex w-full items-center gap-3 px-3.5 py-3 text-left"
         >
-          <div className="flex-1">
-            <div className="text-lg font-semibold text-ink">记录 RPE</div>
-            <div className="mt-0.5 text-sm text-muted">
-              自感用力程度 1-10。关掉的话，记一组时少填一个框
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-semibold text-ink">记录 RPE</div>
+            {/* 【这句说明为什么改短了】
+                原来写的是"自感用力程度 1-10。关掉的话，记一组时少填一个框"。
+                在 375px 的手机上，右边那个开关占掉 56 像素之后这一行只剩 250 像素，
+                24 个字放不下 —— 最后那个"框"会单独掉到第二行，
+                把这一格撑得比别人高出一截（截图里一眼就看出来了）。
+                缩到 19 个字刚好一行放得下，意思一点没少。 */}
+            <div className="mt-0.5 text-xs leading-relaxed text-muted">
+              自感用力程度 1-10。关掉就少填一个框。
             </div>
           </div>
           {/* 【为什么把"开/关"两个字换成一个滑动开关】
@@ -463,14 +497,14 @@ export function SettingsScreen() {
           onClick={() => setSub('body')}
         />
         {/* ---------- 备份 ---------- */}
-        <div className="card p-4">
-          <div className="text-lg font-semibold text-ink">备份</div>
-          <p className="mt-0.5 text-sm text-muted">
+        <div className="px-3.5 py-3">
+          <div className="text-base font-semibold text-ink">备份</div>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted">
             数据只存在这台手机里，清缓存或换手机都会丢。
             建议每周导一次，顺手发到微信收藏。
           </p>
 
-          <div className="mt-3.5 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <button
               type="button"
               onClick={handleExport}
@@ -498,18 +532,19 @@ export function SettingsScreen() {
 
           {importMessage !== '' && (
             <p
-              className={`mt-3 text-xs ${
+              className={`mt-3 text-xs leading-relaxed ${
                 importOk ? 'text-ink-2' : 'text-brand'
               }`}
             >
               {importMessage}
             </p>
           )}
+          </div>
         </div>
       </div>
 
       {/* 最底下这一行版本号。
-          放在卡片列表【外面】，不跟上面那些设置项混在一起 ——
+          放在设置列表【外面】，不跟上面那些设置项混在一起 ——
           它是"查一下"用的说明文字，不是一个可以点的功能。 */}
       <VersionLine />
     </div>
@@ -518,6 +553,10 @@ export function SettingsScreen() {
 
 // 设置列表里的一行。
 // 单独写成一个小零件，是为了几行不用把同样的样式抄好几遍。
+//
+// 【它自己为什么没有边框、没有圆角、没有底色】
+// 那些全交给外面那个 .ledger 管：块有边线，行与行之间靠 divide-y 画细线。
+// 每一行都自己带一套框，就又变回"一叠卡片"了 —— 那正是这一轮要改掉的。
 function SettingRow({
   label,
   hint,
@@ -531,11 +570,14 @@ function SettingRow({
     <button
       type="button"
       onClick={onClick}
-      className="card press flex w-full items-center gap-3 p-4 text-left"
+      // px-3.5 py-3：比原来那张卡片的 p-4 紧一档。
+      // 一行"名字 + 说明"从 100 像素压到 62 像素左右 ——
+      // 七行下来省掉将近 300 像素，一屏就能看完大半。
+      className="press flex w-full items-center gap-3 px-3.5 py-3 text-left"
     >
-      <div className="flex-1">
-        <div className="text-lg font-semibold text-ink">{label}</div>
-        <div className="mt-0.5 text-sm text-muted">{hint}</div>
+      <div className="min-w-0 flex-1">
+        <div className="text-base font-semibold text-ink">{label}</div>
+        <div className="mt-0.5 text-xs leading-relaxed text-muted">{hint}</div>
       </div>
       {/* 箭头用 SVG 画，不用「›」这个字符。
           字符的粗细和大小是跟着字体走的 —— 不同手机上的系统字体不一样，
