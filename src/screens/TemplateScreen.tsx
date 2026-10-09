@@ -114,7 +114,7 @@ export function TemplateScreen({ onBack }: { onBack: () => void }) {
               <button
                 type="button"
                 onClick={() => setExpandedId(expanded ? null : template.id)}
-                className="press w-full px-3.5 py-3 text-left"
+                className="press-row w-full px-3.5 py-3 text-left"
               >
                 <div className="flex items-center gap-2">
                   <span className="flex-1 truncate text-base font-semibold text-ink">

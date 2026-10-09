@@ -44,7 +44,7 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
   return (
     // 半透明的黑遮罩，盖住整个屏幕，让用户知道这里是弹窗、后面点不了
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="animate-pop max-h-full w-full max-w-[440px] overflow-y-auto card rounded-2xl p-5">
+      <div className="animate-pop card max-h-full w-full max-w-[440px] overflow-y-auto p-5">
         <h2 className="mb-4 text-lg font-semibold text-ink">新建动作</h2>
 
         {/* ---------- 动作名称 ---------- */}
@@ -68,9 +68,11 @@ export function ExerciseForm({ onSave, onCancel }: Props) {
               type="button"
               onClick={() => setMuscleGroup(group)}
               // min-h-11 = 44 像素，手指点得准的最小尺寸
-              className={`min-h-11 rounded-lg border px-3 text-sm ${
+              // 选中样式和全站所有"一排可选值"（外观、休息秒数、筛选条、
+              // 有氧动作）保持一致：淡橙底 + 橙字 + 橙边
+              className={`press min-h-11 rounded-lg border px-3 text-sm ${
                 muscleGroup === group
-                  ? 'border-brand bg-brand font-semibold text-on-brand'
+                  ? 'border-brand bg-brand/10 font-semibold text-brand'
                   : 'border-line-2 text-ink-2'
               }`}
             >

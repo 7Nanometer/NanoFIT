@@ -48,7 +48,7 @@ export function TemplatePicker({
               key={template.id}
               type="button"
               onClick={() => onPick(template)}
-              className="press w-full px-3.5 py-2.5 text-left"
+              className="press-row w-full px-3.5 py-2.5 text-left"
             >
               <div className="flex items-center gap-2">
                 <span className="flex-1 truncate text-base font-medium text-ink">

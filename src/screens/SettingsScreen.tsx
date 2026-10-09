@@ -454,7 +454,7 @@ export function SettingsScreen() {
           // "这其实是个开关，而且现在是开着的"。这两条属性就是补这个的。
           role="switch"
           aria-checked={settings.rpeEnabled}
-          className="press flex w-full items-center gap-3 px-3.5 py-3 text-left"
+          className="press-row flex w-full items-center gap-3 px-3.5 py-3 text-left"
         >
           <div className="min-w-0 flex-1">
             <div className="text-base font-semibold text-ink">记录 RPE</div>
@@ -558,7 +558,7 @@ function SettingRow({
       // px-3.5 py-3：比原来那张卡片的 p-4 紧一档。
       // 一行"名字 + 说明"从 100 像素压到 62 像素左右 ——
       // 七行下来省掉将近 300 像素，一屏就能看完大半。
-      className="press flex w-full items-center gap-3 px-3.5 py-3 text-left"
+      className="press-row flex w-full items-center gap-3 px-3.5 py-3 text-left"
     >
       <div className="min-w-0 flex-1">
         <div className="text-base font-semibold text-ink">{label}</div>

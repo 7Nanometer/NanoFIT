@@ -111,7 +111,7 @@ export function ExercisePicker({ customExercises, onPick, onClose }: Props) {
               key={item.id}
               type="button"
               onClick={() => onPick(item.id)}
-              className="press flex w-full items-center gap-2 px-3.5 py-2.5 text-left"
+              className="press-row flex w-full items-center gap-2 px-3.5 py-2.5 text-left"
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate text-base font-medium text-ink">{item.name}</div>

@@ -195,7 +195,7 @@ export function LibraryScreen({ onBack }: { onBack: () => void }) {
                 type="button"
                 // 再点一次就收起来
                 onClick={() => setExpandedId(expanded ? null : item.id)}
-                className="press w-full px-3.5 py-2.5 text-left"
+                className="press-row w-full px-3.5 py-2.5 text-left"
               >
                 <div className="flex items-center gap-2">
                   <span className="truncate text-base font-semibold text-ink">

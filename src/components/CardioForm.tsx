@@ -152,7 +152,7 @@ export function CardioForm({
   return (
     // 半透明遮罩 + 居中的面板，和"新建动作"那个弹窗同一套写法
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="animate-pop max-h-full w-full max-w-[440px] overflow-y-auto card rounded-2xl p-5">
+      <div className="animate-pop card max-h-full w-full max-w-[440px] overflow-y-auto p-5">
         <div className="mb-4 flex items-center">
           <h2 className="flex-1 text-lg font-semibold text-ink">记一次有氧</h2>
           <button
@@ -249,7 +249,7 @@ export function CardioForm({
               role="switch"
               aria-checked={trackMode}
               onClick={() => setTrackMode(!trackMode)}
-              className="press flex min-h-11 w-full items-center gap-3 text-left text-sm text-ink-2"
+              className="press-row flex min-h-11 w-full items-center gap-3 text-left text-sm text-ink-2"
             >
               <span className="flex-1">操场模式（按道次和圈数算距离）</span>
               <Switch checked={trackMode} />

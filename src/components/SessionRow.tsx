@@ -142,7 +142,7 @@ export function SessionRow({
       <button
         type="button"
         onClick={onToggle}
-        className="press grid w-full grid-cols-[1.5rem_1fr] items-start gap-x-2.5 px-3.5 py-2.5 text-left"
+        className="press-row grid w-full grid-cols-[1.5rem_1fr] items-start gap-x-2.5 px-3.5 py-2.5 text-left"
       >
         <span className="t-index mt-1">{String(index + 1).padStart(2, '0')}</span>
 
